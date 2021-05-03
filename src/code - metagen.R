@@ -1,8 +1,6 @@
 ### NOTER
 
 ## TODO:
-# skal de nye qols inverteres?
-
 # 3 kan gå ud indtil videre:
 # Databases, publication, outcome_reported_as -> afhænger dog af næste søgning
 
@@ -132,11 +130,10 @@ data_cont <- data_extract %>%
   )
 
 ### TESTS ###
-
 testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
 
-# REVERSE DASH AND CALCULATE SMD  ----------------------------------------------------------------
+# REVERSE DASH  ---------------------------------------------------
 
 data_cont <- data_cont %>%
   mutate(
@@ -144,7 +141,11 @@ data_cont <- data_cont %>%
     con_mean = if_else(outcome == "dash", 100 - con_mean, con_mean),
     int_mean = if_else(outcome == "qdash", 100 - int_mean, int_mean),
     con_mean = if_else(outcome == "qdash", 100 - con_mean, con_mean)
-  ) %>%
+  )
+
+# CALCULATE SMD ------------------------------------------------
+
+data_cont <- data_cont %>%
   group_by(studlab, interv) %>%
   nest() %>%
   mutate(
@@ -167,16 +168,12 @@ data_cont <- data_cont %>%
   unnest(c(data, smd, se)) %>%
   ungroup()
 
-
-# CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -----------------------------------------
-
+# CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 data_cont_bin <- data_cont %>% make_binary(type = "ma")
 
-#### tests
-
+#### TESTS
 expect_equal(nrow(data_cont), nrow(drop_na(data_cont %>% select(starts_with("bin_")))))
 expect_equal(nrow(data_cont), nrow(data_cont_bin))
-
 ####
 
 data_cs <- data_cont_bin %>%
