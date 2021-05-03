@@ -57,3 +57,33 @@ data_extract %>%
         total_neer_3_part = sum(neer_3_part),
         total_neer_4_part = sum(neer_4_part)
     )
+
+
+
+data_cont %>% map_df(~ count(.x))
+
+
+data_cont %>% count(databases)
+
+
+characteristics <- data_extract %>%
+    select(2:14, starts_with("total"), -imputed_vars) %>%
+    names()
+
+characteristics %>%
+    map(~ n_distinct(data_extract[.x])) %>%
+    set_names(characteristics) %>%
+    enframe() %>%
+    unnest(value)
+
+
+data_extract %>% count(language)
+
+
+unq_df <- data_extract %>%
+    select(characteristics) %>%
+    map_df(~ tibble(class = class(.), n_dist = n_distinct(.), value = toString(unique(.))))
+
+
+
+data_cont %>% filter(outcome %in% c(prom_outcomes, "cs"))
