@@ -78,8 +78,26 @@ nrsi_studies <- data_extract %>%
   pull(studlab) %>%
   unique()
 
+# REMOVE COLS WITH ZERO VARIANCE
+
+char_col <- data_extract %>%
+  select(-starts_with(cont_outcomes), -starts_with(bin_outcomes)) %>%
+  names()
+
+zv_cols <- data_extract %>%
+  select(char_col) %>%
+  map_df(~ tibble(
+    class = class(.),
+    n_dist = n_distinct(.),
+    value = toString(unique(.)),
+  ), .id = "col_name") %>%
+  filter(n_dist == 1) %>%
+  pull(col_name)
+
+data_extract <- data_extract %>% select(-all_of(zv_cols))
+
 # CALCULATE TOTAL AGE AND LOSS TO FU --------------------------------
-data_extract <- data_extract %>%
+data_extract() <- data_extract %>%
   left_join(data_extract %>%
     group_by(studlab) %>%
     summarize(
@@ -132,6 +150,7 @@ data_cont <- data_extract %>%
 ### TESTS ###
 testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
+####
 
 # REVERSE DASH  ---------------------------------------------------
 
