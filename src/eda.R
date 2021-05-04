@@ -1,20 +1,101 @@
-pacman::p_load(tidyverse)
 
-df <- read_excel(here("data", "p3 data extract.xlsx")) %>%
-    clean_names() %>%
-    mutate_if(is.character, str_to_lower) %>%
-    rename(studlab = study_identifier)
 
-unq_df <- map_df(df, ~ tibble(class = class(.), value = toString(unique(.))))
+data_cont %>%
+    group_by(studlab) %>%
+    mutate(bin_ttfu = case_when(
+        max(follow_up) >= 12 ~ 1,
+        between(max(follow_up), 6, 11.999) ~ 2,
+        TRUE ~ 3
+    )) %>%
+    select(studlab, follow_up, bin_ttfu) %>%
+    distinct() %>%
+    View()
+
+### SKAL JEG LAVE DET SÅ JEG FJERNE DE OUTCOMES DER ER RAPPORTERET TIL UNDER
+# EKSEMPELVIS 6 MDR?
+# Det er vel næsten det der er meningen med den?
+# ELLER OPFYLDER timepoint of assessment den funktion??
+
+
+
+data_cont %>% count(documentation_for_treatment)
+
+
+data_cont %>%
+    mutate(
+        bin_doctreat = if_else(documentation_for_treatment == "yes", 1, 2)
+    ) %>%
+    select(studlab, documentation_for_treatment, bin_doctreat) %>%
+    distinct() %>%
+    View()
+
+
+
+data_cont %>%
+    mutate(
+        bin_toi = case_when(
+            between(time_of_intervention, 0, 2) ~ 1,
+            between(time_of_intervention, 2.0001, 14) ~ 2,
+            between(time_of_intervention, 14.0001, 21) ~ 3,
+            TRUE ~ 4
+        )
+    ) %>%
+    select(studlab, time_of_intervention, bin_toi) %>%
+    distinct() %>%
+    View()
+
+
+
+
+data_cont %>%
+    mutate(
+        bin_34part = case_when(
+            total_neer_1_part == 0 & total_neer_2_part == 0 ~ 1,
+            TRUE ~ 2
+        )
+    ) %>%
+    select(studlab, contains("neer"), bin_34part) %>%
+    View()
+
+data_cont %>%
+    mutate(
+        bin_34part = if_else(total_neer_1_part == 0 & total_neer_2_part == 0, 1, 2)
+    ) %>%
+    select(studlab, contains("neer"), bin_34part) %>%
+    View()
+
+
+
+test_bin <- data_extract %>%
+    select(studlab, intervention_type, language) %>%
+    mutate(
+        intervention_type = as_factor(intervention_type),
+        intervention_type = fct_expand(intervention_type, c("orif")),
+        language = as_factor(if_else(language == "english", language, "other"))
+    )
+
+expand_grid(
+    interv = levels(test_bin$intervention_type),
+    studlab = unique(test_bin$studlab)
+) %>% mutate(across(where(is.character), as.factor))
+
+
+
+
+data_extract %>%
+    group_by(studlab) %>%
+    summarize(n_sample = total_n - replace_na(total_loss_to_fu, 0)) %>%
+    select(n_sample)
+
+data_extract %>%
+    mutate(n_sample = total_n - replace_na(total_loss_to_fu, 0)) %>%
+    select(studlab, total_n, total_loss_to_fu, n_sample)
+
+
+unq_df() <- map_df(df, ~ tibble(class = class(.), value = toString(unique(.))))
 
 
 unq_df %>% filter(class == "character")
-
-
-data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
-    clean_names() %>%
-    mutate_if(is.character, str_to_lower) %>%
-    rename(studlab = study_identifier)
 
 
 data_extract %>%

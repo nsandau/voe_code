@@ -1,8 +1,4 @@
 
-
-
-
-
 # create binarys ----------------------------------------------------------
 
 make_binary <- function(data, type = NULL) {
@@ -14,10 +10,6 @@ make_binary <- function(data, type = NULL) {
         between(total_avg_age, 60.001, 65) ~ 3,
         between(total_avg_age, 65.001, 70) ~ 2,
         total_avg_age > 70 ~ 1,
-      ),
-      bin_db = case_when(
-        str_detect(databases, "embase|pubmed") & str_detect(databases, "psycinf|pedro|wos") ~ 2, # SKAL FIKSES N?R INDHENTET DATA
-        str_detect(databases, "embase|pubmed") ~ 1
       ),
       bin_lang = case_when(
         str_detect(language, "english") ~ 1,
@@ -33,11 +25,6 @@ make_binary <- function(data, type = NULL) {
         total_neer_3_part > total_neer_1_part & total_neer_3_part > total_neer_2_part & total_neer_3_part > total_neer_4_part ~ 3,
         total_neer_4_part > total_neer_1_part & total_neer_4_part > total_neer_2_part & total_neer_4_part > total_neer_3_part ~ 4,
         is.na(total_neer_1_part) | is.na(total_neer_2_part) | is.na(total_neer_3_part) | is.na(total_neer_4_part) ~ 5
-      ),
-      bin_sex = case_when(
-        is.na(total_female) | is.na(total_male) ~ 3,
-        total_female / (total_male + total_female) > 0.85 ~ 1,
-        TRUE ~ 2
       ),
       bin_fu_excl = case_when(
         between(follow_up, 3, 6) ~ 4,
@@ -57,16 +44,6 @@ make_binary <- function(data, type = NULL) {
       bin_design = case_when(
         design == "rct" ~ 1,
         design == "nrsi" ~ 2
-      ),
-      bin_publication = case_when(
-        publication_status == "published" ~ 1,
-        publication_status == "unpublished" ~ 2
-      ),
-      bin_funding = case_when(
-        funding == "nonprofit" ~ 1,
-        funding == "none" ~ 1,
-        funding == "commercial" ~ 2,
-        funding == "nr" ~ 2
       ),
       bin_sel_bias = case_when(
         design == "rct" & rob_selective_reporting == "low" ~ 1,
@@ -111,78 +88,30 @@ make_binary <- function(data, type = NULL) {
     ))
 
 
-  if (type == "ma") {
+  # intervention
+  data <- data %>% mutate(bin_interv = case_when( # Husk at opdatere hvis flere interventioner!!
+    interv == "ha" ~ 1,
+    interv == "plate" ~ 2,
+    interv == "mixed" ~ 3,
+    interv == "tension-band" ~ 4,
+    interv == "rsa" ~ 5,
+    interv == "imn" ~ 6,
+    interv == "exfix" ~ 7,
+    interv == "k-wires" ~ 8
+  ))
 
-    # intervention
-    data <- data %>% mutate(bin_interv = case_when( # Husk at opdatere hvis flere interventioner!!
-      interv == "ha" ~ 1,
-      interv == "plate" ~ 2,
-      interv == "mixed" ~ 3,
-      interv == "tension-band" ~ 4,
-      interv == "rsa" ~ 5,
-      interv == "imn" ~ 6,
-      interv == "exfix" ~ 7,
-      interv == "k-wires" ~ 8
-    ))
-
-
-    # bin_totaln - total patients
-    data <- data %>%
-      group_by(studlab, outcome, follow_up) %>%
-      summarise(n = sum(int_n, con_n)) %>%
-      slice_max(n, n = 1, with_ties = F) %>%
-      transmute(bin_totaln = case_when(
-        n >= 25 ~ 1,
-        between(n, 20, 24) ~ 2,
-        between(n, 1, 19) ~ 3
-      )) %>%
-      left_join(data, .)
-  }
-
-  if (type == "nma") {
-
-    # placeholder for studies with multiple outcomes
-    data <- data %>% mutate(bin_interv = 1) # skal være det samme som i sel_grid så de ikke bliver frasorteret
-
-    ## bin_totaln max patients analysed
-    data <- data %>%
-      group_by(studlab, outcome, follow_up) %>%
-      summarise(n = sum(n1, n2)) %>%
-      slice_max(n, n = 1, with_ties = F) %>%
-      transmute(bin_totaln = case_when(
-        n >= 25 ~ 1,
-        between(n, 20, 24) ~ 2,
-        between(n, 1, 19) ~ 3
-      )) %>%
-      left_join(data, .)
-  }
-
-
-
-  data %>%
-    mutate(
-      across(starts_with("bin_"), as.integer),
-      follow_up = as.integer(follow_up)
-    ) %>%
-    ungroup() %>%
-    return()
+  # bin_totaln - total patients
+  data <- data %>%
+    group_by(studlab, outcome, follow_up) %>%
+    summarise(n = sum(int_n, con_n)) %>%
+    slice_max(n, n = 1, with_ties = F) %>%
+    transmute(bin_totaln = case_when(
+      n >= 25 ~ 1,
+      between(n, 20, 24) ~ 2,
+      between(n, 1, 19) ~ 3
+    )) %>%
+    left_join(data, .)
 }
-
-# bin_interv used as placeholder for multiple outcomes in NMA -------------
-
-multi_outc_nma <- function(df) {
-  df %>%
-    group_by(studlab, treat1, treat2, follow_up) %>%
-    mutate(
-      bin_interv =
-        case_when(
-          n() > 1 ~ as.integer(row_number() + 1),
-          TRUE ~ as.integer(1)
-        )
-    ) %>%
-    return()
-}
-
 
 
 # multi_outc_MA - used for testing ----------------------------------------
@@ -200,21 +129,12 @@ multi_outc_ma <- function(df) {
     return()
 }
 
-
 # create selection grid ---------------------------------------------------
 
 
-sel_grid <- function(data, type = NULL) {
-  if (type == "ma") {
-    interv_vec <- c(unique(data$bin_interv), 51:53)
-  }
-  if (type == "nma") {
-    interv_vec <- unique(data$bin_interv)
-  }
-
+sel_grid <- function(data) {
   expand_grid(
     sel_age = unique(data$bin_age),
-    sel_db = unique(data$bin_db),
     sel_lang = unique(data$bin_lang),
     sel_year = unique(data$bin_year),
     sel_totaln = unique(data$bin_totaln),
@@ -222,23 +142,19 @@ sel_grid <- function(data, type = NULL) {
     sel_outcome = c(unique(data$bin_outcome), 51),
     sel_imputed = unique(data$bin_imputed),
     sel_design = unique(data$bin_design),
-    sel_funding = unique(data$bin_funding),
     sel_sel_bias = unique(data$bin_sel_bias),
-    sel_publication = unique(data$bin_publication),
-    sel_interv = interv_vec,
+    sel_interv = c(unique(data$bin_interv), 51:53),
     sel_fu_excl = c(unique(data$bin_fu_excl), 51:52),
     sel_unq_fu = unique(data$follow_up),
     sel_fu_period = unique(data$bin_fu_period)
   ) %>%
-    mutate(across(everything(), as.integer))
+    mutate(across(everything(), as.integer)) %>%
+    return()
 }
 
-
-
-
 # subset ------------------------------------------------------------------
-
-do_subset <- function(data, nrsi_studies, type = NULL,
+# input args automatically filled by pmap
+do_subset <- function(data, nrsi_studies,
                       sel_age,
                       sel_db,
                       sel_lang,
@@ -248,9 +164,7 @@ do_subset <- function(data, nrsi_studies, type = NULL,
                       sel_outcome,
                       sel_imputed,
                       sel_design,
-                      sel_funding,
                       sel_sel_bias,
-                      sel_publication,
                       sel_interv,
                       sel_fu_excl,
                       sel_unq_fu,
@@ -263,10 +177,9 @@ do_subset <- function(data, nrsi_studies, type = NULL,
   select_loss_fu <- 1:sel_loss_fu
   select_imputed <- 1:sel_imputed
   select_design <- 1:sel_design
-  select_publication <- 1:sel_publication
-  select_funding <- 1:sel_funding
   select_sel_bias <- 1:sel_sel_bias
 
+  ## select outcome
   select_outcome <- if (sel_outcome == 51) {
     unique(data$bin_outcome)
   } else {
@@ -274,30 +187,19 @@ do_subset <- function(data, nrsi_studies, type = NULL,
   }
 
 
-  ### select interv. For NMA select_interv placeholder for multiple outcomes
-  if (type == "ma") {
-    select_interv <- if (sel_interv == 51) {
-      c(2, 4)
-    } else # plate + tension
-    if (sel_interv == 52) {
-      c(1, 5)
-    } else # rsa + HA
-    if (sel_interv == 53) {
-      unique(data$bin_interv)
-    }
-    else {
-      sel_interv
-    }
+  ### select interv.
+  select_interv <- if (sel_interv == 51) {
+    c(2, 4)
+  } else # plate + tension
+  if (sel_interv == 52) {
+    c(1, 5)
+  } else # rsa + HA
+  if (sel_interv == 53) {
+    unique(data$bin_interv)
   }
-
-  if (type == "nma") {
-    select_interv <- if (sel_outcome == 51) {
-      c(1, sel_interv)
-    } else {
-      (unique(data$bin_interv))
-    }
+  else {
+    sel_interv
   }
-
 
   # follow-up vars
 
@@ -337,8 +239,6 @@ do_subset <- function(data, nrsi_studies, type = NULL,
     bin_loss_fu %in% select_loss_fu &
     bin_imputed %in% select_imputed &
     bin_design %in% select_design &
-    bin_publication %in% select_publication &
-    bin_funding %in% select_funding &
     bin_sel_bias %in% select_sel_bias &
     bin_outcome %in% select_outcome &
     bin_interv %in% select_interv &
@@ -347,27 +247,10 @@ do_subset <- function(data, nrsi_studies, type = NULL,
     (bin_fu_period %in% select_fu_period & bin_fu_period_long %in% select_fu_period_long)]
 
 
-  # filter out dfs with < 2 studies
-
-
   # , studies with only NRSI, studies with 1 RCT and 1 NRSI
   # | sum(temp_sub$studlab %in% nrsi_studies) == nrow(temp_sub) | nrow(temp_sub) == 2 & sum(temp_sub$studlab %in% nrsi_studies) > 0
 
-
-  if (nrow(temp_sub) < 2) {
-    return(NULL)
-  }
-
-  if (type == "nma") {
-    if (!any(temp_sub$treat1 == "nonop" | temp_sub$treat2 == "nonop")) {
-      return(NULL)
-    }
-  }
-
-
-  {
-    return(temp_sub)
-  }
+  return(temp_sub)
 }
 
 
@@ -386,49 +269,8 @@ do_metagen <- function(data) {
 }
 
 
-# do netmeta --------------------------------------------------------------
 
-do_netmeta <- function(data) {
-  netmeta(
-    TE = TE,
-    seTE = seTE,
-    treat1 = treat1,
-    treat2 = treat2,
-    studlab = studlab,
-    data = data,
-    sm = "SMD",
-    comb.fixed = TRUE,
-    comb.random = FALSE,
-    reference.group = "nonop",
-    details.chkmultiarm = TRUE,
-    sep.trts = " vs ",
-    tol.multiarm = 0.05
-  )
-}
-
-
-
-# identify studies with > 1 subnetwork ------------------------------------
-
-identify_multi_networks <- function(data) {
-  data %>%
-    map(~ netconnection(
-      .x$treat1,
-      .x$treat2,
-      .x$studlab,
-      data = .x
-    )) %>%
-    enframe() %>%
-    mutate(
-      sub_net = map_int(value, ~ .x[["n.subnets"]])
-    ) %>%
-    filter(sub_net > 1) %>%
-    pull(name)
-}
-
-
-
-# extract results metagen ---------------------------------------------------------
+# extract results metagen -------------------------------------------------
 
 
 extract_metagen <- function(data) {
@@ -455,34 +297,6 @@ extract_metagen <- function(data) {
 
 
 
-# extract results nma -----------------------------------------------------
-
-extract_netmeta <- function(data) {
-  map(data, ~ as_tibble(.x$TE.fixed, rownames = "treatment") %>%
-    select(treatment, nonop) %>%
-    rename(te.fixed = nonop) %>%
-    mutate(
-      sete.fixed = as_tibble(.x$seTE.fixed) %>% pluck("nonop"),
-      pval.fixed = as_tibble(.x$pval.fixed) %>% pluck("nonop"),
-      lower.fixed = as_tibble(.x$lower.fixed) %>% pluck("nonop"),
-      upper.fixed = as_tibble(.x$upper.fixed) %>% pluck("nonop"),
-      te.random = as_tibble(.x$TE.random) %>% pluck("nonop"),
-      sete.random = as_tibble(.x$seTE.random) %>% pluck("nonop"),
-      pval.random = as_tibble(.x$pval.random) %>% pluck("nonop"),
-      lower.random = as_tibble(.x$lower.random) %>% pluck("nonop"),
-      upper.random = as_tibble(.x$upper.random) %>% pluck("nonop"),
-      i2 = .x$I2,
-      q = .x$Q,
-      pval.q = .x$pval.Q,
-      k.trt = .x$k.trts,
-      k = .x$k,
-      studlab = str_flatten(.x$studlab, collapse = " ")
-    ) %>%
-    mutate_all(~ replace(., is.na(.), 0))) %>%
-    bind_rows() %>%
-    filter(!treatment == "nonop")
-}
-
 
 # gather pvals ------------------------------------------------------------
 
@@ -505,30 +319,4 @@ gather_pvals <- function(data) {
         )
     ) %>%
     distinct()
-}
-
-
-
-
-# gather pvals nma --------------------------------------------------------
-
-gather_pvals_nma <- function(data) {
-  data %>%
-    transmute(
-      pval = pval.fixed,
-      estimate = te.fixed,
-      k = k,
-      treatment = treatment,
-      method = "fixed"
-    ) %>%
-    bind_rows(
-      .,
-      data %>% transmute(
-        pval = pval.random,
-        estimate = te.random,
-        k = k,
-        treatment = treatment,
-        method = "random"
-      )
-    )
 }

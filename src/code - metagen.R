@@ -1,8 +1,13 @@
 ### NOTER
 
 ## TODO:
-# 3 kan gå ud indtil videre:
-# Databases, publication, outcome_reported_as -> afhænger dog af næste søgning
+# skal nok køre CS og proms sammen.
+## må lave check i subset funktionen som splitter
+
+
+## Udgået:
+# zv: publ_status, databases, outcom_rep_as
+# sample_n: none smaller than min requirement (15)
 
 # LIBRARIES ---------------------------------------------------------------
 pacman::p_load(
@@ -78,14 +83,14 @@ nrsi_studies <- data_extract %>%
   pull(studlab) %>%
   unique()
 
-# REMOVE COLS WITH ZERO VARIANCE
+# REMOVE COLS WITH ZERO VARIANCE--------------------------------------
 
 char_col <- data_extract %>%
   select(-starts_with(cont_outcomes), -starts_with(bin_outcomes)) %>%
   names()
 
 zv_cols <- data_extract %>%
-  select(char_col) %>%
+  select(all_of(char_col)) %>%
   map_df(~ tibble(
     class = class(.),
     n_dist = n_distinct(.),
@@ -97,7 +102,7 @@ zv_cols <- data_extract %>%
 data_extract <- data_extract %>% select(-all_of(zv_cols))
 
 # CALCULATE TOTAL AGE AND LOSS TO FU --------------------------------
-data_extract() <- data_extract %>%
+data_extract <- data_extract %>%
   left_join(data_extract %>%
     group_by(studlab) %>%
     summarize(
@@ -109,6 +114,10 @@ data_extract() <- data_extract %>%
       total_neer_4_part = sum(neer_4_part)
     )) %>%
   select(-c(n, lost_to_fu), -starts_with("neer"))
+
+
+# CHECK THAT NO NEWLY ADDED STUDY HAS < 15 samples
+expect_true(all(data_extract$total_n - replace_na(data_extract$total_loss_to_fu, 0) > 15))
 
 # RESHAPE DF --------------------------------------------------------------
 
@@ -226,7 +235,6 @@ grid_qol <- sel_grid(data_qol, type = "ma")
 
 
 # Subset data -------------------------------------------------------------
-
 
 ##### CS
 plan(multiprocess, workers = 6)
