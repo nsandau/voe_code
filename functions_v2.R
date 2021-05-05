@@ -1,4 +1,8 @@
-conflict_prefer("year", "lubridate")
+# TROR MIN LØSNING MED FACTOR GIVER MIG SLOWDOWNS.
+# HVIS FOR MEGET NÅR JEG BRUGER DT MÅ JEG KONVERTERE TIL NUMERISK
+
+
+
 
 # CREATE BINARYS FUNCTION
 data_bin <- data_cont %>%
@@ -35,23 +39,47 @@ data_bin <- data_cont %>%
             between(time_of_intervention, 14.0001, 21) ~ 3,
             TRUE ~ 4
         ),
-        bin_doctreat = if_else(documentation_for_treatment == "yes", 1, 2)
+        bin_doctreat = if_else(documentation_for_treatment == "yes", 1, 2),
+        bin_loss_fu = case_when(
+            (total_loss_to_fu / total_n) < 0.15 ~ 1,
+            TRUE ~ 2
+        )
     ) %>%
-    mutate(across(where(is.numeric), as.integer))
+    ungroup() %>%
+    mutate(
+        bin_outcome = as.numeric(fct_relevel(outcome, "cs")), # making sure CS is no 1
+        across(where(is.numeric), as.integer)
+    )
 
 ### CREATE SELECTION GRID
+make_sel_grid <- function(df, outcome_type = NULL) {
+    testthat::expect_true(outcome_type %in% c("qol", "func"))
 
-sel_grid <- expand_grid(
-    language = unique(data_bin$bin_lang),
-    year = unique(data_bin$bin_year),
-    design = unique(data_bin$bin_design),
-    age = unique(data_bin$bin_age),
-    neer_34part = unique(data_bin$bin_34part),
-    toi = unique(data_bin$bin_toi),
-    doctreat = unique(data_bin$bin_doctreat)
-) %>%
-    mutate(across(where(is.numeric), as.integer))
-sel_grid
+    if (outcome_type == "qol") {
+        outcome_vals <- c(unique(df$bin_outcome), 51) # 51: QoLs
+    } else {
+        outcome_vals <- c(unique(df$bin_outcome), 51:52) # 51: PROMS + CS,52 PROMS
+    }
+
+    expand_grid(
+        language = unique(df$bin_lang),
+        year = unique(df$bin_year),
+        design = unique(df$bin_design),
+        age = unique(df$bin_age),
+        neer_34part = unique(df$bin_34part),
+        toi = unique(df$bin_toi),
+        doctreat = unique(df$bin_doctreat),
+        loss_fu = unique(df$bin_loss_fu),
+        outcome = outcome_vals
+    ) %>%
+        mutate(
+            across(where(is.numeric), as.integer),
+            across(where(is.character), as_factor)
+        ) %>%
+        return()
+}
+
+
 
 ### SUBSET FUNCTION
 
@@ -62,8 +90,10 @@ do_subset <- function(df,
                       age,
                       neer_34part,
                       toi,
-                      doctreat) {
-    # assign selection vars
+                      doctreat,
+                      loss_fu,
+                      outcome) {
+    # Simple selection vars
     sel_lang <- 1:language
     sel_year <- 1:year
     sel_design <- 1:design
@@ -71,6 +101,19 @@ do_subset <- function(df,
     sel_34part <- 1:neer_34part
     sel_toi <- 1:toi
     sel_doctreat <- 1:doctreat
+    sel_loss_fu <- 1:loss_fu
+
+    # outcome selection
+    if (!outcome %in% c(51, 52)) {
+        sel_outcome <- outcome
+    }
+    else if (outcome == 51) {
+        sel_outcome <- unique(df$bin_outcome)
+    }
+    else if (outcome == 52) {
+        unq <- unique(df$bin_outcome)
+        sel_outcome <- unq[!unq %in% 1]
+    }
 
     # do subset
     # convert to data.table when finished using dtplyr
@@ -83,15 +126,69 @@ do_subset <- function(df,
             bin_age %in% sel_age,
             bin_34part %in% sel_34part,
             bin_toi %in% sel_toi,
-            bin_doctreat %in% sel_doctreat
+            bin_doctreat %in% sel_doctreat,
+            bin_loss_fu %in% sel_loss_fu,
+            bin_outcome %in% sel_outcome
         ) %>%
         return()
 }
 
-subsets <- sel_grid %>% pmap(.,
+
+
+## TESTING
+
+# data split
+
+data_qol <- data_bin %>%
+    filter(outcome %in% qol_outcomes) %>%
+    select(studlab, follow_up, smd, se, starts_with("bin_"))
+data_func <- data_bin %>%
+    filter(outcome %in% c("cs", prom_outcomes)) %>%
+    select(studlab, follow_up, smd, se, starts_with("bin_"))
+
+# make sel grid
+
+sel_grid_qol <- data_qol %>%
+    make_sel_grid(outcome_type = "qol")
+
+sel_grid_func <- data_func %>%
+    make_sel_grid(outcome_type = "func")
+
+sel_grid_qol %>%
+    slice_head(n = 1000) %>%
+    View()
+sel_grid_func %>%
+    slice_head(n = 1000) %>%
+    View()
+
+
+# do subsets
+subsets_qol <- sel_grid_qol %>%
+    slice_head(n = 1000) %>%
+    pmap(.,
+        do_subset,
+        df = data_qol
+    )
+
+subsets_qol[1:50]
+
+subsets_func <- sel_grid_func %>%
+    slice_head(n = 1000) %>%
+    pmap(.,
+        do_subset,
+        df = data_func
+    )
+
+subsets_func[1:50]
+
+
+
+
+profvis(sel_grid_qol %>% pmap(.,
     do_subset,
-    df = data_bin %>% select(starts_with("bin_"))
-)
+    df = subset_data
+))
+
 
 subsets %>% map(~ distinct(.x))
 

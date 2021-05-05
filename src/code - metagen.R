@@ -8,6 +8,7 @@
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
 # sample_n: none smaller than min requirement (15)
+# time to follow-up: ingen under 12 mdr
 
 # LIBRARIES ---------------------------------------------------------------
 pacman::p_load(
@@ -27,6 +28,8 @@ pacman::p_load(
 # settings
 conflict_prefer("filter", "dplyr")
 conflict_prefer("between", "dplyr")
+conflict_prefer("year", "lubridate")
+
 
 # import functions
 source(here("src", "functions.R"))
@@ -116,8 +119,9 @@ data_extract <- data_extract %>%
   select(-c(n, lost_to_fu), -starts_with("neer"))
 
 
-# CHECK THAT NO NEWLY ADDED STUDY HAS < 15 samples
+# TEST: NO STUDY HAS < 15 samples
 expect_true(all(data_extract$total_n - replace_na(data_extract$total_loss_to_fu, 0) > 15))
+
 
 # RESHAPE DF --------------------------------------------------------------
 
@@ -143,7 +147,8 @@ data_cont <- data_extract %>%
     values_from = value
   ) %>%
   mutate(
-    follow_up = as.numeric(follow_up)
+    follow_up = as.numeric(follow_up),
+    outcome = as_factor(outcome),
   ) %>%
   left_join(
     (data_extract %>%
@@ -195,6 +200,18 @@ data_cont <- data_cont %>%
   select(-esc_output) %>%
   unnest(c(data, smd, se)) %>%
   ungroup()
+
+## TEST: No study has FU less than 6 or 12
+ttfu_test <- data_cont %>%
+  group_by(studlab, outcome) %>%
+  mutate(bin_ttfu = case_when(
+    max(follow_up) >= 12 ~ 1,
+    between(max(follow_up), 6, 11.999) ~ 2,
+    TRUE ~ 3
+  )) %>%
+  select(bin_ttfu)
+
+expect_true(all(ttfu_test$bin_ttfu == 1))
 
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 data_cont_bin <- data_cont %>% make_binary(type = "ma")
