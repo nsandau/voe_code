@@ -1,22 +1,41 @@
 
+test <- data_cont %>% mutate(
+    bin_outcome = as.numeric(fct_relevel(outcome, "cs"))
+)
+test %>% select(outcome, bin_outcome)
+
+df <- test
+
+grid <- expand_grid(
+    language = unique(df$bin_lang),
+    outcome = c(unique(df$bin_outcome), 51:52)
+)
+
+str_subset(unique(data_bin$outcome), fixed("cs"), negate = TRUE)
+
 
 data_cont %>%
+    mutate(
+        bin_outcome = as.integer(as.factor(outcome))
+    ) %>%
+    select(outcome, bin_outcome)
+
+
+!unique(data_bin$outcome) %in% c("cs")
+
+
+############################ 3
+data_cont %>%
     group_by(studlab) %>%
-    mutate(bin_ttfu = case_when(
-        max(follow_up) >= 12 ~ 1,
-        between(max(follow_up), 6, 11.999) ~ 2,
-        TRUE ~ 3
-    )) %>%
-    select(studlab, follow_up, bin_ttfu) %>%
-    distinct() %>%
+    mutate(
+        pct_loss = (total_loss_to_fu / total_n),
+        bin_loss_fu = case_when(
+            (total_loss_to_fu / total_n) < 0.15 ~ 1,
+            TRUE ~ 2
+        )
+    ) %>%
+    select(studlab, total_n, total_loss_to_fu, pct_loss, bin_loss_fu) %>%
     View()
-
-### SKAL JEG LAVE DET SÅ JEG FJERNE DE OUTCOMES DER ER RAPPORTERET TIL UNDER
-# EKSEMPELVIS 6 MDR?
-# Det er vel næsten det der er meningen med den?
-# ELLER OPFYLDER timepoint of assessment den funktion??
-
-
 
 data_cont %>% count(documentation_for_treatment)
 
