@@ -1,9 +1,7 @@
 ### NOTER
 
 ## TODO:
-# skal nok køre CS og proms sammen.
 ## må lave check i subset funktionen som splitter
-
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
@@ -146,10 +144,6 @@ data_cont <- data_extract %>%
     names_from = c("bin_interv", "type"),
     values_from = value
   ) %>%
-  mutate(
-    follow_up = as.numeric(follow_up),
-    outcome = as_factor(outcome),
-  ) %>%
   left_join(
     (data_extract %>%
       select(
@@ -159,6 +153,10 @@ data_cont <- data_extract %>%
       filter(intervention_type != "nonop") %>%
       rename(interv = intervention_type)
     )
+  ) %>%
+  mutate(
+    follow_up = as.integer(follow_up),
+    outcome = as_factor(outcome)
   )
 
 ### TESTS ###
@@ -262,7 +260,7 @@ subset_cs <- grid_cs %>%
     nrsi_studies = nrsi_studies,
     .options = future_options(packages = c("data.table"))
   ) %>%
-  set_names(seq_along(1:length(.)))
+  set_names(seq_along(.))
 plan(sequential)
 
 
@@ -279,7 +277,7 @@ subset_prom <- grid_prom %>%
     nrsi_studies = nrsi_studies,
     .options = future_options(packages = c("data.table"))
   ) %>%
-  set_names(seq_along(1:length(.)))
+  set_names(seq_along(.)) ## KAN SLETTE seq_along
 plan(sequential)
 
 subset_prom_final <- subset_prom[!duplicated(subset_prom)] %>%
@@ -296,7 +294,7 @@ subset_qol <- grid_qol %>%
     nrsi_studies = nrsi_studies,
     .options = future_options(packages = c("data.table"))
   ) %>%
-  set_names(seq_along(1:length(.)))
+  set_names(seq_along(.))
 plan(sequential)
 
 
@@ -310,6 +308,29 @@ expect_equal(nrow(grid_qol), length(subset_qol))
 
 
 subset_test <- subset_qol_final %>% keep(~ any(.x$studlab == "roberson 2017"))
+
+
+
+###### split multiple outcome dfs
+
+### FUNCTIONAL
+
+multi_out_qol <- subsets_qol_final %>%
+  keep(~ any(duplicated(.x[["studlab"]])))
+
+plan(multicore, workers = 10)
+tictoc::tic()
+multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
+tictoc::toc()
+
+### ER SLET IKKE TESTET!!
+subsets_qol_final <- c(
+  subsets_qol_final %>%
+    discard(~ any(duplicated(.x[["studlab"]]))),
+  multi_out_qol_splits
+)
+
+
 
 
 # Conduct metagen ---------------------------------------------------------
