@@ -1,4 +1,87 @@
 
+
+subsets_func[2]
+
+
+
+######### follow-up
+data_cont %>%
+    group_by(studlab, outcome) %>%
+    mutate(
+        bin_fu_longest = case_when(
+            follow_up == max(follow_up) ~ 1,
+            TRUE ~ 0
+        ),
+        bin_fu_period = case_when(
+            between(follow_up, 0, 11.999) ~ 1,
+            between(follow_up, 12, 23.999) ~ 2,
+            follow_up >= 24 ~ 3
+        )
+    ) %>%
+    group_by(studlab, outcome, bin_fu_period) %>%
+    mutate(bin_fu_period_long = case_when(
+        follow_up == max(follow_up) ~ 1,
+        TRUE ~ 0
+    ))
+
+
+data_bin %>%
+    select(studlab, outcome, follow_up, bin_fu_longest, bin_fu_period, bin_fu_period_long) %>%
+    View()
+
+
+df <- data_func
+follow_up <- 99
+fu_period <- 1
+
+
+if (!follow_up %in% c(98, 99)) { # selects identical FUs
+    sel_follow_up <- follow_up
+    sel_fu_longest <- c(0, 1) # select all
+    sel_fu_period <- unique(df$bin_fu_period) # select all
+    sel_fu_period_long <- c(0, 1) # select all
+} else if (follow_up == 98) { # longest fu from each study
+    sel_follow_up <- unique(df$follow_up) # select all fus
+    sel_fu_longest <- 1 # select only longest
+    sel_fu_period <- unique(df$bin_fu_period) # select all
+    sel_fu_period_long <- c(0, 1) # select all
+} else if (follow_up == 99) {
+    sel_follow_up <- unique(df$follow_up) # select all fus
+    sel_fu_longest <- c(0, 1) # select only longest
+    sel_fu_period <- fu_period # select specific period
+    sel_fu_period_long <- 1 # select longest fu in each period
+}
+
+
+sel_follow_up
+sel_fu_longest
+sel_fu_period
+sel_fu_period_long
+
+
+df %>%
+    filter(
+        follow_up %in% sel_follow_up,
+        bin_fu_longest %in% sel_fu_longest,
+        bin_fu_period %in% sel_fu_period,
+        bin_fu_period_long %in% sel_fu_period_long
+    ) %>%
+    View()
+
+
+
+expand_grid(
+    fu = c(12, 98, 99),
+    fu_period = c(1, 2, 3)
+)
+
+
+
+
+
+
+###########
+
 test <- data_cont %>% mutate(
     bin_outcome = as.numeric(fct_relevel(outcome, "cs"))
 )
