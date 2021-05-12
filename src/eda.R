@@ -1,11 +1,38 @@
 
 
-subsets_func[2]
+data_cont %>%
+    group_by(studlab) %>%
+    mutate(
+        interv = as.factor(interv),
+        interv = fct_expand(interv, c("plate_tb", "arthro"))
+    ) %>%
+    select(studlab, interv)
+
+
+bmark_df <- data_cont %>% mutate(
+    interv_fct = as.factor(interv),
+    interv_int = as.numeric(interv_fct)
+)
+
+microbenchmark::microbenchmark(
+    bmark_df %>% filter(interv_fct == "k-wires"),
+    bmark_df %>% filter(interv_int == 3),
+    times = 1000
+)
+
+
+#### method of outcome analysis
+
+data_cont %>%
+    group_by(studlab) %>%
+    mutate(bin_oa = if_else(method_of_outcome_analysis == "intention-to-treat", 1, 2)) %>%
+    select(studlab, method_of_outcome_analysis, bin_oa) %>%
+    View()
 
 
 
 ######### follow-up
-data_cont %>%
+data_cont() %>%
     group_by(studlab, outcome) %>%
     mutate(
         bin_fu_longest = case_when(

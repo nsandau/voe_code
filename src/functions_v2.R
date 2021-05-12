@@ -1,7 +1,11 @@
 # CREATE BINARYS FUNCTION
+# TEMP STUFF
+
+plan(multicore, workers = 10)
+
+####
 make_binary <- function(df) {
     df %>%
-        ### OBS REMOVE NÅR JEG LAVER TING DER IKKE ER PÅ STUDIEPLAN!
         group_by(studlab) %>%
         mutate(
             bin_lang = if_else(language == "english", 1, 2),
@@ -38,7 +42,8 @@ make_binary <- function(df) {
             bin_loss_fu = case_when(
                 (total_loss_to_fu / total_n) < 0.15 ~ 1,
                 TRUE ~ 2
-            )
+            ),
+            bin_oa = if_else(method_of_outcome_analysis == "intention-to-treat", 1, 2)
         ) %>%
         group_by(studlab, outcome) %>%
         mutate(
@@ -53,10 +58,12 @@ make_binary <- function(df) {
             )
         ) %>%
         group_by(studlab, outcome, bin_fu_period) %>%
-        mutate(bin_fu_period_long = case_when(
-            follow_up == max(follow_up) ~ 1,
-            TRUE ~ 0
-        )) %>%
+        mutate(
+            bin_fu_period_long = case_when(
+                follow_up == max(follow_up) ~ 1,
+                TRUE ~ 0
+            )
+        ) %>%
         ungroup() %>%
         mutate(
             bin_outcome = as.numeric(fct_relevel(outcome, "cs")), # making sure CS is no 1
@@ -85,8 +92,10 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         doctreat = unique(df$bin_doctreat),
         loss_fu = unique(df$bin_loss_fu),
         outcome = outcome_vals,
-        follow_up = c(unique(df$follow_up), 98:99),
-        fu_period = unique(df$bin_fu_period)
+        follow_up = c(unique(df$follow_up), 98:99), # 98 longest fu from each study, 99 periods of fu
+        fu_period = unique(df$bin_fu_period),
+        outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
+        intervention = c(levels(df$interv), "plate_tb", "artro", "all")
     ) %>%
         mutate(
             across(where(is.numeric), as.integer),
@@ -95,10 +104,7 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         return()
 }
 
-
-
 ### SUBSET FUNCTION
-
 do_subset <- function(df,
                       language,
                       year,
@@ -110,7 +116,9 @@ do_subset <- function(df,
                       loss_fu,
                       outcome,
                       follow_up,
-                      fu_period) {
+                      fu_period,
+                      outcome_analysis,
+                      intervention) {
     # Simple selection vars
     sel_lang <- 1:language
     sel_year <- 1:year
@@ -134,7 +142,6 @@ do_subset <- function(df,
     }
 
     # follow-up
-
     if (!follow_up %in% c(98, 99)) { # selects identical FUs
         sel_follow_up <- follow_up
         sel_fu_longest <- c(0, 1) # select all
@@ -152,6 +159,25 @@ do_subset <- function(df,
         sel_fu_period_long <- 1 # select longest fu in each period
     }
 
+    # outcome analysis
+    if (outcome_analysis == 98) {
+        sel_oa <- unique(df$bin_oa)
+    }
+    else {
+        sel_oa <- outcome_analysis
+    }
+
+
+    # intervention
+    if (intervention == "plate_tb") {
+        sel_interv <- c("tension-band", "plate")
+    } else if (intervention == "artro") {
+        sel_interv <- c("rsa", "ha")
+    } else if (intervention == "all") {
+        sel_interv <- levels(df$interv)
+    } else {
+        sel_interv <- intervention
+    }
 
     # do subset
     # convert to data.table  using dtplyr when done
@@ -170,7 +196,9 @@ do_subset <- function(df,
             follow_up %in% sel_follow_up,
             bin_fu_longest %in% sel_fu_longest,
             bin_fu_period %in% sel_fu_period,
-            bin_fu_period_long %in% sel_fu_period_long
+            bin_fu_period_long %in% sel_fu_period_long,
+            bin_oa %in% sel_oa,
+            interv %in% sel_interv
         )
     if (nrow(subset) == 0) {
         return(NULL)
@@ -187,11 +215,11 @@ do_subset <- function(df,
 data_qol <- data_cont %>%
     filter(outcome %in% qol_outcomes) %>%
     make_binary() %>%
-    select(studlab, outcome, follow_up, smd, se, starts_with("bin_"))
+    select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_"))
 data_func <- data_cont %>%
     filter(outcome %in% c("cs", prom_outcomes)) %>%
     make_binary() %>%
-    select(studlab, outcome, follow_up, smd, se, starts_with("bin_"))
+    select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_"))
 
 # make sel grid
 
@@ -215,12 +243,12 @@ subsets_qol <- sel_grid_qol %>%
         do_subset,
         df = data_qol
     ) %>%
-    set_names(1:length(.)) %>%
+    set_names(seq_along(.)) %>%
     discard(~ is.null(.x))
 
 subsets_func <- sel_grid_func %>%
-    slice_head(n = 5000) %>%
-    pmap(.,
+    slice_head(n = 50000) %>%
+    future_pmap(.,
         do_subset,
         df = data_func
     ) %>%
@@ -229,7 +257,7 @@ subsets_func <- sel_grid_func %>%
 
 subsets_func[100:200]
 
-# splitting dfs afterwards
+# splitting dfs with multi outcome
 
 multi_out_qol <- subsets_qol %>%
     keep(~ any(duplicated(.x[["studlab"]])))
@@ -237,115 +265,9 @@ multi_out_qol <- subsets_qol %>%
 multi_out_func <- subsets_func %>%
     keep(~ any(duplicated(.x[["studlab"]])))
 
-multi_out_func %>%
-    enframe() %>%
-    mutate(
-        n_dupls = map_dbl(value, ~ sum(duplicated(.x[["studlab"]]))),
-        n_rows = map_dbl(value, ~ nrow(.x))
-    ) %>%
-    filter(n_rows > 2, n_dupls < 8)
-
-df <- multi_out_func[["3928"]]
-
-split_dfs <- df %>%
-    group_by(studlab) %>%
-    filter(n() > 1) %>%
-    group_by(outcome) %>%
-    group_split()
-
+####
 
 split_multi_outc <- function(df) {
-    split_dfs <- df %>%
-        group_by(studlab) %>%
-        filter(n() > 1) %>%
-        group_by(outcome) %>%
-        group_split()
-    unq_df <- df %>%
-        group_by(studlab) %>%
-        filter(n() <= 1)
-
-
-    ### DET ER DEN HER DER SLOWER! JEG BEHØVER IKKE ALLE PERMUTATIONS. JEG BEHØVER KUN AT HVER ENKELT ER FØRST! gør jeg ik?
-    perms <- t(gtools::permutations(n = length(split_dfs), r = length(split_dfs)))
-
-    loop_list <- list()
-    temp_df <- tibble()
-    for (i in seq_along(perms)) {
-        if (i %% length(split_dfs) == 1) {
-            temp_df <- split_dfs[[perms[[i]]]]
-        }
-        if (i %% length(split_dfs) != 1) {
-            temp_df <- bind_rows(
-                temp_df,
-                split_dfs[[perms[[i]]]] %>% filter(!studlab %in% temp_df[["studlab"]])
-            )
-        }
-        if (i %% length(split_dfs) == 0) {
-            temp_df <- bind_rows(temp_df, unq_df)
-            loop_list <- c(loop_list, list(temp_df))
-            temp_df <- tibble()
-        }
-    }
-    return(loop_list)
-}
-# multisession
-plan(multicore, workers = 10)
-tictoc::tic()
-multi_outcome <- multi_out_func %>% future_map(split_multi_outc)
-tictoc::toc()
-
-###### ALTERNATIV FUNKTIONER TIL SPLIT OUTCOMES JEG IKKE HAR TESTET HELT FÆRDIG
-unqs <- x %>%
-    group_by(studlab) %>%
-    filter(n() < 2)
-dupls <- x %>%
-    group_by(studlab) %>%
-    filter(n() > 1)
-
-rows <- dupls %>%
-    group_by(outcome) %>%
-    group_split()
-rows
-
-row_combs <- t(gtools::permutations(n = length(rows), r = length(rows))) %>% as_tibble()
-
-nested_dfs <- row_combs %>%
-    mutate(across(everything(), ~ map(., ~ pluck(rows, .x))))
-
-
-sbu_func <- function(acc_df, new_df) {
-    studlabs <- acc_df %>% pull(studlab)
-
-    bind_rows(acc_df, new_df %>% filter(!studlab %in% studlabs))
-}
-
-tictoc::tic()
-test <- nested_dfs %>% future_map(~ reduce(.x, sbu_func))
-tictoc::toc()
-
-
-# FROM STACKOVERLO
-
-row_combinations <- t(combn(x = 1:nrow(x), m = k)) %>% as_tibble()
-row_combinations
-row_combinations %>%
-    mutate(across(everything(), ~ map(., ~ pluck(rows, .x))))
-
-
-
-
-
-
-
-all_equal(nested_dfs[["V1"]], nested_dfs[["V2"]])
-
-
-df <- multi_out_func[["3928"]]
-df <- multi_out_func[["4499"]]
-df
-
-### START FOR I IN LIST OF DUPL LISTS
-new_split_mout <- function(df) {
     split_dfs <- df %>%
         group_by(studlab) %>%
         filter(n() > 1) %>%
@@ -379,15 +301,59 @@ new_split_mout <- function(df) {
 }
 
 
+split_multi_outc_while <- function(df) {
+    split_dfs <- df %>%
+        group_by(studlab) %>%
+        filter(n() > 1) %>%
+        group_by(outcome) %>%
+        group_split()
+    unq_df <- df %>%
+        group_by(studlab) %>%
+        filter(n() <= 1)
+
+    loop_list <- list()
+    for (df_idx in seq_along(split_dfs)) {
+        loop_df <- split_dfs[[df_idx]]
+        sub_idx <- df_idx + 1
+        while (sub_idx <= length(split_dfs)) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>% filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
+
+        sub_idx <- 1
+        while (sub_idx < df_idx) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>% filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
+        loop_df <- bind_rows(loop_df, unq_df)
+        loop_list <- c(loop_list, list(loop_df))
+    }
+    return(loop_list)
+}
+
+
+df <- multi_out_func[[99]]
+
+df
+microbenchmark::microbenchmark(split_multi_outc(df), split_multi_outc_while(df))
+
+
+testthat::expect_equal(split_multi_outc(df), split_multi_outc_while(df))
+
+
 plan(multicore, workers = 10)
 tictoc::tic()
-multi_outcome <- multi_out_func %>% future_map(new_split_mout)
+multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
 tictoc::toc()
 
+subsets_qol_final <- c(
+    subsets_qol %>%
+        discard(~ any(duplicated(.x[["studlab"]]))),
+    multi_out_qol_splits %>% flatten()
+)
 
 
-
-
+subsets_qol_final %>% flatten()
 
 ## profiling
 profvis(multi_out_func[1:50] %>% map(split_multi_outc))

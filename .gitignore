@@ -1,6 +1,6 @@
 
-# Created by https://www.toptal.com/developers/gitignore/api/r,windows,git,python,vscode,linux
-# Edit at https://www.toptal.com/developers/gitignore?templates=r,windows,git,python,vscode,linux
+# Created by https://www.toptal.com/developers/gitignore/api/r,git,linux,python,windows,libreoffice,microsoftoffice
+# Edit at https://www.toptal.com/developers/gitignore?templates=r,git,linux,python,windows,libreoffice,microsoftoffice
 
 ### Git ###
 # Created by git for backups. To disable backups in Git:
@@ -17,6 +17,10 @@
 *_LOCAL_*.txt
 *_REMOTE_*.txt
 
+### LibreOffice ###
+# LibreOffice locks
+.~lock.*#
+
 ### Linux ###
 *~
 
@@ -31,6 +35,27 @@
 
 # .nfs files are created when an open file is removed but is still being accessed
 .nfs*
+
+### MicrosoftOffice ###
+*.tmp
+
+# Word temporary
+~$*.doc*
+
+# Word Auto Backup File
+Backup of *.doc*
+
+# Excel temporary
+~$*.xls*
+
+# Excel Backup File
+*.xlk
+
+# PowerPoint temporary
+~$*.ppt*
+
+# Visio autosave temporary files
+*.~vsd*
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -226,14 +251,6 @@ vignettes/*.pdf
 # R package: bookdown caching files
 /*_files/
 
-### vscode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
-
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db:encryptable
@@ -259,4 +276,4 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# End of https://www.toptal.com/developers/gitignore/api/r,windows,git,python,vscode,linux
+# End of https://www.toptal.com/developers/gitignore/api/r,git,linux,python,windows,libreoffice,microsoftoffice

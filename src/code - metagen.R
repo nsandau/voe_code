@@ -1,7 +1,8 @@
 ### NOTER
 
 ## TODO:
-## må lave check i subset funktionen som splitter
+## unit testing
+## kan lave outcome om til factor, ligesom interv
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
@@ -156,7 +157,8 @@ data_cont <- data_extract %>%
   ) %>%
   mutate(
     follow_up = as.integer(follow_up),
-    outcome = as_factor(outcome)
+    outcome = as_factor(outcome),
+    interv = as_factor(interv)
   )
 
 ### TESTS ###
@@ -219,11 +221,6 @@ expect_equal(nrow(data_cont), nrow(drop_na(data_cont %>% select(starts_with("bin
 expect_equal(nrow(data_cont), nrow(data_cont_bin))
 ####
 
-data_cs <- data_cont_bin %>%
-  filter(outcome == "cs") %>%
-  select(studlab, follow_up, smd, se, starts_with("bin_")) %>%
-  as.data.table()
-
 data_prom <- data_cont_bin %>%
   filter(outcome %in% prom_outcomes) %>%
   select(studlab, follow_up, smd, se, starts_with("bin_")) %>%
@@ -237,35 +234,16 @@ data_qol <- data_cont_bin %>%
 
 ######## TESTS
 # Testing that no studies have multiple outcomes
-expect_equal(data_cs %>% multi_outc_ma() %>% filter(multi_out != 1) %>% nrow(), 0)
 expect_equal(data_prom %>% multi_outc_ma() %>% filter(multi_out != 1) %>% nrow(), 0)
 expect_equal(data_qol %>% multi_outc_ma() %>% filter(multi_out != 1) %>% nrow(), 0)
 
-
 # Create selection grids  ---------------------------------------------------
 
-grid_cs <- sel_grid(data_cs, type = "ma")
 grid_prom <- sel_grid(data_prom, type = "ma")
 grid_qol <- sel_grid(data_qol, type = "ma")
 
 
 # Subset data -------------------------------------------------------------
-
-##### CS
-plan(multiprocess, workers = 6)
-subset_cs <- grid_cs %>%
-  future_pmap(do_subset,
-    data = data_cs,
-    type = "ma",
-    nrsi_studies = nrsi_studies,
-    .options = future_options(packages = c("data.table"))
-  ) %>%
-  set_names(seq_along(.))
-plan(sequential)
-
-
-subset_cs_final <- subset_cs[!duplicated(subset_cs)] %>%
-  discard(~ is.null(.x))
 
 ##### PROMS
 
@@ -277,15 +255,13 @@ subset_prom <- grid_prom %>%
     nrsi_studies = nrsi_studies,
     .options = future_options(packages = c("data.table"))
   ) %>%
-  set_names(seq_along(.)) ## KAN SLETTE seq_along
+  set_names(seq_along(.))
 plan(sequential)
 
-subset_prom_final <- subset_prom[!duplicated(subset_prom)] %>%
+subset_prom <- subset_prom %>%
   discard(~ is.null(.x))
 
 ##### QOL
-
-
 plan(multiprocess, workers = 6)
 subset_qol <- grid_qol %>%
   future_pmap(do_subset,
@@ -298,7 +274,7 @@ subset_qol <- grid_qol %>%
 plan(sequential)
 
 
-subset_qol_final <- subset_qol[!duplicated(subset_qol)] %>%
+subset_qol <- subset_qol %>%
   discard(~ is.null(.x))
 
 ##### TESTS
@@ -307,29 +283,30 @@ expect_equal(nrow(grid_prom), length(subset_prom))
 expect_equal(nrow(grid_qol), length(subset_qol))
 
 
-subset_test <- subset_qol_final %>% keep(~ any(.x$studlab == "roberson 2017"))
-
-
-
 ###### split multiple outcome dfs
 
-### FUNCTIONAL
-
-multi_out_qol <- subsets_qol_final %>%
+multi_out_qol <- subsets_qol %>%
   keep(~ any(duplicated(.x[["studlab"]])))
+
+multi_out_func <- subsets_func %>%
+  keep(~ any(duplicated(.x[["studlab"]])))
+
+
+### skal nok converte tilbage til tibble et sted
+
+
 
 plan(multicore, workers = 10)
 tictoc::tic()
 multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
 tictoc::toc()
 
-### ER SLET IKKE TESTET!!
-subsets_qol_final <- c(
-  subsets_qol_final %>%
-    discard(~ any(duplicated(.x[["studlab"]]))),
-  multi_out_qol_splits
-)
 
+subsets_qol_final <- c(
+  subsets_qol %>%
+    discard(~ any(duplicated(.x[["studlab"]]))),
+  multi_out_qol_splits %>% flatten()
+)
 
 
 
