@@ -1,322 +1,329 @@
+make_binary <- function(df) {
+    df %>%
+        group_by(studlab) %>%
+        mutate(
+            bin_lang = if_else(language == "english", 1, 2),
+            bin_year = case_when(
+                year(publ_date) > 1995 ~ 1,
+                year(publ_date) > 1990 ~ 2,
+                TRUE ~ 3
+            ),
+            bin_design = case_when(
+                design == "rct" ~ 1,
+                design == "prospective nrsi" ~ 2,
+                design == "retrospective nrsi" ~ 3
+            ),
+            bin_age = case_when(
+                total_avg_age >= 65 ~ 1,
+                between(total_avg_age, 60, 64.999) ~ 2,
+                between(total_avg_age, 55, 59.999) ~ 3,
+                between(total_avg_age, 50, 54.999) ~ 4,
+                between(total_avg_age, 18, 49.999) ~ 5,
+                between(total_avg_age, 16, 17.999) ~ 6,
+                total_avg_age < 16 ~ 7
+            ),
+            bin_34part = case_when(
+                total_neer_1_part == 0 & total_neer_2_part == 0 ~ 1,
+                TRUE ~ 2
+            ),
+            bin_toi = case_when(
+                between(time_of_intervention, 0, 2) ~ 1,
+                between(time_of_intervention, 2.0001, 14) ~ 2,
+                between(time_of_intervention, 14.0001, 21) ~ 3,
+                TRUE ~ 4
+            ),
+            bin_doctreat = if_else(documentation_for_treatment == "yes", 1, 2),
+            bin_loss_fu = case_when(
+                (total_loss_to_fu / total_n) < 0.15 ~ 1,
+                TRUE ~ 2
+            ),
+            bin_oa = if_else(method_of_outcome_analysis == "intention-to-treat", 1, 2),
+            bin_neer = case_when(
+                all(total_neer_2_part > c(total_neer_1_part, total_neer_3_part, total_neer_4_part)) ~ 2,
+                all(total_neer_3_part > c(total_neer_1_part, total_neer_2_part, total_neer_4_part)) ~ 3,
+                all(total_neer_4_part > c(total_neer_1_part, total_neer_2_part, total_neer_3_part)) ~ 4,
+                TRUE ~ 0
+            )
+        ) %>%
+        group_by(studlab, outcome) %>%
+        mutate(
+            bin_fu_longest = case_when(
+                follow_up == max(follow_up) ~ 1,
+                TRUE ~ 0
+            ),
+            bin_fu_period = case_when(
+                between(follow_up, 0, 11.999) ~ 1,
+                between(follow_up, 12, 23.999) ~ 2,
+                follow_up >= 24 ~ 3
+            )
+        ) %>%
+        group_by(studlab, outcome, bin_fu_period) %>%
+        mutate(
+            bin_fu_period_long = case_when(
+                follow_up == max(follow_up) ~ 1,
+                TRUE ~ 0
+            )
+        ) %>%
+        ungroup() %>%
+        mutate(
+            bin_outcome = as.numeric(fct_relevel(outcome, "cs")), # making sure CS is no 1
+            across(starts_with("bin_"), as.integer)
+        ) %>%
+        return()
+}
 
-# create binarys ----------------------------------------------------------
+### CREATE SELECTION GRID
+make_sel_grid <- function(df, outcome_type = NULL) {
+    testthat::expect_true(outcome_type %in% c("qol", "func"))
 
-make_binary <- function(data, type = NULL) {
-  data <- data %>%
-    mutate(
-      bin_age = case_when(
-        is.na(total_avg_age) ~ 5,
-        between(total_avg_age, 18, 60) ~ 4,
-        between(total_avg_age, 60.001, 65) ~ 3,
-        between(total_avg_age, 65.001, 70) ~ 2,
-        total_avg_age > 70 ~ 1,
-      ),
-      bin_lang = case_when(
-        str_detect(language, "english") ~ 1,
-        TRUE ~ 2
-      ),
-      bin_year = case_when(
-        between(year, 0, 1999) ~ 2,
-        year > 2000 ~ 1,
-      ),
-      bin_neer = case_when(
-        total_neer_1_part > total_neer_2_part & total_neer_1_part > total_neer_3_part & total_neer_1_part > total_neer_4_part ~ 1,
-        total_neer_2_part > total_neer_1_part & total_neer_2_part > total_neer_3_part & total_neer_2_part > total_neer_4_part ~ 2,
-        total_neer_3_part > total_neer_1_part & total_neer_3_part > total_neer_2_part & total_neer_3_part > total_neer_4_part ~ 3,
-        total_neer_4_part > total_neer_1_part & total_neer_4_part > total_neer_2_part & total_neer_4_part > total_neer_3_part ~ 4,
-        is.na(total_neer_1_part) | is.na(total_neer_2_part) | is.na(total_neer_3_part) | is.na(total_neer_4_part) ~ 5
-      ),
-      bin_fu_excl = case_when(
-        between(follow_up, 3, 6) ~ 4,
-        between(follow_up, 6.1, 12) ~ 3,
-        between(follow_up, 12.1, 18) ~ 2,
-        follow_up > 18 ~ 1
-      ),
-      bin_fu_period = case_when(
-        between(follow_up, 0, 11.9) ~ 1,
-        between(follow_up, 12, 23.9) ~ 2,
-        follow_up >= 24 ~ 3
-      ),
-      bin_imputed = case_when(
-        imputed_outcome == "no" ~ 1,
-        imputed_outcome == "yes" ~ 2
-      ),
-      bin_design = case_when(
-        design == "rct" ~ 1,
-        design == "nrsi" ~ 2
-      ),
-      bin_sel_bias = case_when(
-        design == "rct" & rob_selective_reporting == "low" ~ 1,
-        design == "rct" & rob_selective_reporting == "unclear" ~ 2,
-        design == "rct" & rob_selective_reporting == "high" ~ 2,
-        design != "rct" ~ 2
-      ),
-      bin_outcome = case_when( # husk at opdatere hvis flere
-        outcome == "oss" ~ 1,
-        outcome == "sst" ~ 2,
-        outcome == "dash" ~ 3,
-        outcome == "ases" ~ 4,
-        outcome == "cs" ~ 5,
-        outcome == "euroqol" ~ 6,
-        outcome == "qol15d" ~ 7,
-        outcome == "qdash" ~ 8,
-        outcome == "sf36" ~ 9,
-        outcome == "sf36pc" ~ 10,
-        outcome == "vr12" ~ 11,
-        outcome == "sf12pc" ~ 12,
-        outcome == "sf12" ~ 13
-      ),
-      pct_loss_to_fu = (total_loss_to_fu / total_n) * 100,
-      bin_loss_fu = case_when(
-        pct_loss_to_fu <= 5 ~ 1,
-        between(pct_loss_to_fu, 5.01, 10) ~ 2,
-        between(pct_loss_to_fu, 10.01, 15) ~ 3,
-        pct_loss_to_fu > 15 ~ 4,
-        is.na(pct_loss_to_fu) ~ 5
-      )
+    if (outcome_type == "qol") {
+        outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
+    } else {
+        outcome_vals <- c(unique(df$bin_outcome), 98:99) # 98: PROMS + CS,99 PROMS
+    }
+
+    # neer
+    neer_vals <- unique(df$bin_neer)
+    neer_vals <- neer_vals[neer_vals %in% 2:4]
+
+    # outcome
+    interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
+
+    expand_grid(
+        language = unique(df$bin_lang),
+        year = unique(df$bin_year),
+        design = unique(df$bin_design),
+        age = unique(df$bin_age),
+        neer_34part = unique(df$bin_34part),
+        toi = unique(df$bin_toi),
+        doctreat = unique(df$bin_doctreat),
+        loss_fu = unique(df$bin_loss_fu),
+        outcome = outcome_vals,
+        follow_up = c(unique(df$follow_up), 98:99), # 98 longest fu from each study, 99 periods of fu
+        fu_period = unique(df$bin_fu_period),
+        outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
+        intervention = interv_vals,
+        neer = c(neer_vals, 98, 99) # 98: 3-part + 4-part, 99 ALL
     ) %>%
-    group_by(studlab, outcome) %>%
-    # bin_fu_long =
-    mutate(bin_fu_longest = case_when(
-      follow_up == max(follow_up) ~ 1,
-      TRUE ~ 0
-    )) %>%
-    group_by(studlab, outcome, bin_fu_period) %>%
-    mutate(bin_fu_period_long = case_when(
-      follow_up == max(follow_up) ~ 1,
-      TRUE ~ 0
-    ))
+        mutate(
+            across(where(is.numeric), as.integer),
+            across(where(is.character), as_factor)
+        ) %>%
+        return()
+}
 
+### SUBSET FUNCTION
+do_subset <- function(df,
+                      language,
+                      year,
+                      design,
+                      age,
+                      neer_34part,
+                      toi,
+                      doctreat,
+                      loss_fu,
+                      outcome,
+                      follow_up,
+                      fu_period,
+                      outcome_analysis,
+                      intervention,
+                      neer) {
+    # Simple selection vars
+    sel_lang <- 1:language
+    sel_year <- 1:year
+    sel_design <- 1:design
+    sel_age <- 1:age
+    sel_34part <- 1:neer_34part
+    sel_toi <- 1:toi
+    sel_doctreat <- 1:doctreat
+    sel_loss_fu <- 1:loss_fu
 
-  # intervention
-  data <- data %>% mutate(bin_interv = case_when( # Husk at opdatere hvis flere interventioner!!
-    interv == "ha" ~ 1,
-    interv == "plate" ~ 2,
-    interv == "mixed" ~ 3,
-    interv == "tension-band" ~ 4,
-    interv == "rsa" ~ 5,
-    interv == "imn" ~ 6,
-    interv == "exfix" ~ 7,
-    interv == "k-wires" ~ 8
-  ))
+    # outcomes
+    if (!outcome %in% c(98, 99)) { # select specific outcomes
+        sel_outcome <- outcome
+    }
+    else if (outcome == 98) { # select all outcomes
+        sel_outcome <- unique(df$bin_outcome)
+    }
+    else if (outcome == 99) {
+        unq <- unique(df$bin_outcome)
+        sel_outcome <- unq[!unq %in% 1] # remove CS from proms
+    }
 
-  # bin_totaln - total patients
-  data <- data %>%
-    group_by(studlab, outcome, follow_up) %>%
-    summarise(n = sum(int_n, con_n)) %>%
-    slice_max(n, n = 1, with_ties = F) %>%
-    transmute(bin_totaln = case_when(
-      n >= 25 ~ 1,
-      between(n, 20, 24) ~ 2,
-      between(n, 1, 19) ~ 3
-    )) %>%
-    left_join(data, .)
+    # follow-up
+    if (!follow_up %in% c(98, 99)) { # selects identical FUs
+        sel_follow_up <- follow_up
+        sel_fu_longest <- c(0, 1) # select all
+        sel_fu_period <- unique(df$bin_fu_period) # select all
+        sel_fu_period_long <- c(0, 1) # select all
+    } else if (follow_up == 98) { # longest fu from each study
+        sel_follow_up <- unique(df$follow_up) # select all fus
+        sel_fu_longest <- 1 # select only longest
+        sel_fu_period <- unique(df$bin_fu_period) # select all
+        sel_fu_period_long <- c(0, 1) # select all
+    } else if (follow_up == 99) {
+        sel_follow_up <- unique(df$follow_up) # select all fus
+        sel_fu_longest <- c(0, 1) # select only longest
+        sel_fu_period <- fu_period # select specific period
+        sel_fu_period_long <- 1 # select longest fu in each period
+    }
+
+    # outcome analysis
+    if (outcome_analysis == 98) {
+        sel_oa <- unique(df$bin_oa)
+    }
+    else {
+        sel_oa <- outcome_analysis
+    }
+
+    # intervention
+    if (intervention == "plate_tb") {
+        sel_interv <- c("tension-band", "plate")
+    } else if (intervention == "artro") {
+        sel_interv <- c("rsa", "ha")
+    } else if (intervention == "all") {
+        sel_interv <- levels(df$interv)
+    } else {
+        sel_interv <- intervention
+    }
+
+    # neer
+    if (!neer %in% c(98, 99)) { # select specific neer type
+        sel_neer <- neer
+    }
+    else if (neer == 98) { # select 3 and 4 parts
+        sel_neer <- c(3, 4)
+    }
+    else if (neer == 99) { # select all neer types
+        sel_neer <- unique(df$bin_neer)
+    }
+
+    # do subset
+    subset <- df[bin_lang %in% sel_lang &
+        bin_year %in% sel_year &
+        bin_design %in% sel_design &
+        bin_age %in% sel_age &
+        bin_34part %in% sel_34part &
+        bin_toi %in% sel_toi &
+        bin_doctreat %in% sel_doctreat &
+        bin_loss_fu %in% sel_loss_fu &
+        bin_outcome %in% sel_outcome &
+        follow_up %in% sel_follow_up &
+        bin_fu_longest %in% sel_fu_longest &
+        bin_fu_period %in% sel_fu_period &
+        bin_fu_period_long %in% sel_fu_period_long &
+        bin_oa %in% sel_oa &
+        interv %in% sel_interv &
+        bin_neer %in% sel_neer]
+
+    if (nrow(subset) == 0) {
+        return(NULL)
+    }
+    else {
+        return(as_tibble(subset))
+    }
 }
 
 
-# multi_outc_MA - used for testing ----------------------------------------
+split_multi_outc <- function(df) {
+    split_dfs <- df %>%
+        group_by(studlab) %>%
+        filter(n() > 1) %>%
+        group_by(outcome) %>%
+        group_split()
+    unq_df <- df %>%
+        group_by(studlab) %>%
+        filter(n() <= 1)
 
-multi_outc_ma <- function(df) {
-  df %>%
-    group_by(studlab, bin_interv, follow_up) %>%
-    mutate(
-      multi_out =
-        case_when(
-          n() > 1 ~ as.integer(row_number()),
-          TRUE ~ as.integer(1)
-        )
-    ) %>%
-    return()
-}
+    loop_list <- list()
+    for (df_idx in seq_along(split_dfs)) {
+        loop_df <- split_dfs[[df_idx]]
+        sub_idx <- df_idx + 1
+        while (sub_idx <= length(split_dfs)) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
+                filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
 
-# create selection grid ---------------------------------------------------
-
-
-sel_grid <- function(data) {
-  expand_grid(
-    sel_age = unique(data$bin_age),
-    sel_lang = unique(data$bin_lang),
-    sel_year = unique(data$bin_year),
-    sel_totaln = unique(data$bin_totaln),
-    sel_loss_fu = unique(data$bin_loss_fu),
-    sel_outcome = c(unique(data$bin_outcome), 51),
-    sel_imputed = unique(data$bin_imputed),
-    sel_design = unique(data$bin_design),
-    sel_sel_bias = unique(data$bin_sel_bias),
-    sel_interv = c(unique(data$bin_interv), 51:53),
-    sel_fu_excl = c(unique(data$bin_fu_excl), 51:52),
-    sel_unq_fu = unique(data$follow_up),
-    sel_fu_period = unique(data$bin_fu_period)
-  ) %>%
-    mutate(across(everything(), as.integer)) %>%
-    return()
-}
-
-# subset ------------------------------------------------------------------
-# input args automatically filled by pmap
-do_subset <- function(data, nrsi_studies,
-                      sel_age,
-                      sel_db,
-                      sel_lang,
-                      sel_year,
-                      sel_totaln,
-                      sel_loss_fu,
-                      sel_outcome,
-                      sel_imputed,
-                      sel_design,
-                      sel_sel_bias,
-                      sel_interv,
-                      sel_fu_excl,
-                      sel_unq_fu,
-                      sel_fu_period) {
-  select_age <- 1:sel_age
-  select_db <- 1:sel_db
-  select_lang <- 1:sel_lang
-  select_year <- 1:sel_year
-  select_totaln <- 1:sel_totaln
-  select_loss_fu <- 1:sel_loss_fu
-  select_imputed <- 1:sel_imputed
-  select_design <- 1:sel_design
-  select_sel_bias <- 1:sel_sel_bias
-
-  ## select outcome
-  select_outcome <- if (sel_outcome == 51) {
-    unique(data$bin_outcome)
-  } else {
-    sel_outcome
-  }
-
-
-  ### select interv.
-  select_interv <- if (sel_interv == 51) {
-    c(2, 4)
-  } else # plate + tension
-  if (sel_interv == 52) {
-    c(1, 5)
-  } else # rsa + HA
-  if (sel_interv == 53) {
-    unique(data$bin_interv)
-  }
-  else {
-    sel_interv
-  }
-
-  # follow-up vars
-
-  select_fu_excl <- if (sel_fu_excl %in% c(51, 52)) {
-    1:4
-  } else {
-    1:sel_fu_excl
-  }
-  select_fu_longest <- if (sel_fu_excl %in% c(51, 52)) {
-    0:1
-  } else {
-    1
-  }
-  select_fu <- if (sel_fu_excl == 51) {
-    sel_unq_fu
-  } else {
-    unique(data$follow_up)
-  }
-  select_fu_period <- if (sel_fu_excl == 52) {
-    sel_fu_period
-  } else {
-    unique(data$bin_fu_period)
-  }
-  select_fu_period_long <- if (sel_fu_excl == 52) {
-    1
-  } else {
-    0:1
-  }
-
-  # do subset
-
-  temp_sub <- data[bin_age %in% select_age &
-    bin_db %in% select_db &
-    bin_lang %in% select_lang &
-    bin_year %in% select_year &
-    bin_totaln %in% select_totaln &
-    bin_loss_fu %in% select_loss_fu &
-    bin_imputed %in% select_imputed &
-    bin_design %in% select_design &
-    bin_sel_bias %in% select_sel_bias &
-    bin_outcome %in% select_outcome &
-    bin_interv %in% select_interv &
-    (bin_fu_excl %in% select_fu_excl & bin_fu_longest %in% select_fu_longest) &
-    follow_up %in% select_fu &
-    (bin_fu_period %in% select_fu_period & bin_fu_period_long %in% select_fu_period_long)]
-
-
-  # , studies with only NRSI, studies with 1 RCT and 1 NRSI
-  # | sum(temp_sub$studlab %in% nrsi_studies) == nrow(temp_sub) | nrow(temp_sub) == 2 & sum(temp_sub$studlab %in% nrsi_studies) > 0
-
-  return(temp_sub)
+        sub_idx <- 1
+        while (sub_idx < df_idx) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
+                filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
+        loop_df <- bind_rows(loop_df, unq_df)
+        loop_list <- c(loop_list, list(loop_df))
+    }
+    return(loop_list)
 }
 
 
-# do metagen --------------------------------------------------------------
+if (sys.nframe() == 0) { # if __name__ == __main__
+
+    ## TESTING
+
+    # data split
+
+    sel_grid_qol %>%
+        slice_head(n = 50) %>%
+        View()
+    sel_grid_func %>%
+        slice_head(n = 1000) %>%
+        View()
+
+    # do subsets
+    subsets_qol <- sel_grid_qol %>%
+        slice_head(n = 50000) %>%
+        future_pmap(
+            .l = .,
+            .f = do_subset,
+            df = data_qol
+        ) %>%
+        set_names(seq_along(.)) # %>%
+    discard(~ is.null(.x))
 
 
-do_metagen <- function(data) {
-  metagen(
-    TE = smd,
-    seTE = se,
-    hakn = FALSE,
-    method.tau = "DL",
-    studlab = studlab,
-    data = data
-  )
-}
+    subsets_func <- sel_grid_func %>%
+        slice_head(n = 50000) %>%
+        future_pmap(
+            .l = .,
+            .f = do_subset,
+            df = data_func
+        ) %>%
+        set_names(seq_along(.)) # %>%
+    discard(~ is.null(.x))
 
+    # splitting dfs with multi outcome
 
+    multi_out_qol <- subsets_qol %>%
+        keep(~ any(duplicated(.x[["studlab"]])))
 
-# extract results metagen -------------------------------------------------
+    multi_out_func <- subsets_func %>%
+        keep(~ any(duplicated(.x[["studlab"]])))
 
+    tictoc::tic()
+    multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
+    tictoc::toc()
 
-extract_metagen <- function(data) {
-  data %>%
-    map_dbl("TE.fixed") %>%
-    enframe(name = "iteration", "te.fixed") %>%
-    mutate(
-      sete.fixed = map_dbl(data, "seTE.fixed"),
-      lower.fixed = map_dbl(data, "lower.fixed"),
-      upper.fixed = map_dbl(data, "upper.fixed"),
-      pval.fixed = map_dbl(data, "pval.fixed"),
-      te.random = map_dbl(data, "TE.random"),
-      sete.random = map_dbl(data, "seTE.random"),
-      lower.random = map_dbl(data, "lower.random"),
-      upper.random = map_dbl(data, "upper.random"),
-      pval.random = map_dbl(data, "pval.random"),
-      i2 = map_dbl(data, "I2"),
-      q = map_dbl(data, "Q"),
-      pval.q = map_dbl(data, "pval.Q"),
-      k = map_dbl(data, "k"),
-      studlab = map_chr(data, ~ str_flatten(.x$studlab, collapse = " "))
+    subsets_qol_final <- c(
+        subsets_qol %>%
+            discard(~ any(duplicated(.x[["studlab"]]))),
+        multi_out_qol_splits %>% flatten()
     )
-}
 
 
 
+    ## profiling
+    profvis(multi_out_func[1:50] %>% map(split_multi_outc))
 
-# gather pvals ------------------------------------------------------------
 
-gather_pvals <- function(data) {
-  data %>%
-    transmute(
-      pval = pval.fixed,
-      estimate = te.fixed,
-      k = k,
-      method = "fixed"
-    ) %>%
-    bind_rows(
-      .,
-      data %>%
-        transmute(
-          pval = pval.random,
-          estimate = te.random,
-          k = k,
-          method = "random"
-        )
-    ) %>%
-    distinct()
+    profvis::profvis(sel_grid_qol %>%
+        slice_head(n = 50000) %>%
+        pmap(
+            .l = .,
+            .f = do_subset,
+            df = data_qol
+        ) %>%
+        set_names(seq_along(.)) %>%
+        discard(~ is.null(.x)))
 }
