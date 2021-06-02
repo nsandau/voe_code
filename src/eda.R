@@ -1,4 +1,125 @@
 
+###
+
+null_subs <- subsets_func %>% keep(~ is.null(.x))
+
+
+length(null_subs)
+
+
+null_grid <- sel_grid_func[null_subs %>%
+    names() %>%
+    as.integer(), ]
+
+null_grid[1:100, ] %>% View()
+
+data_func %>% View()
+
+
+
+data_qol %>% glimpse()
+
+
+df <- data_qol
+df <- data_func
+
+interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
+
+interv_vals
+
+
+data_func %>% filter(interv == "k-wires", bin_outcome == 3)
+
+
+grid_dropped <- sel_grid_func %>%
+    filter(intervention != "k-wires", outcome != 3) %>%
+    nrow()
+
+grid_dropped
+
+nrow(sel_grid_func) - grid_dropped
+
+
+
+
+levels(data_qol$interv)
+test <- data_qol %>% mutate(interv_drop = fct_drop(interv))
+levels(test$interv_drop)
+
+
+levels(data_func$interv)
+test <- data_func %>% mutate(interv_drop = fct_drop(interv))
+levels(test$interv_drop)
+
+
+data_func %>% View()
+
+
+data_cont %>% select(studlab, outcome, imputed_outcome, imputed_vars)
+
+
+expand_grid(
+    language = unique(df$bin_lang),
+    year = unique(df$bin_year)
+)
+
+
+neer_vals <- unique(df$bin_neer)
+neer_vals <- neer_vals[neer_vals %in% 2:4]
+
+neer_vals
+
+
+test_neer <- data_cont %>%
+    group_by(studlab) %>%
+    mutate(
+        bin_neer = case_when(
+            total_neer_1_part > total_neer_2_part & total_neer_1_part > total_neer_3_part & total_neer_1_part > total_neer_4_part ~ 1,
+            total_neer_2_part > total_neer_1_part & total_neer_2_part > total_neer_3_part & total_neer_2_part > total_neer_4_part ~ 2,
+            total_neer_3_part > total_neer_1_part & total_neer_3_part > total_neer_2_part & total_neer_3_part > total_neer_4_part ~ 3,
+            total_neer_4_part > total_neer_1_part & total_neer_4_part > total_neer_2_part & total_neer_4_part > total_neer_3_part ~ 4,
+            is.na(total_neer_1_part) | is.na(total_neer_2_part) | is.na(total_neer_3_part) | is.na(total_neer_4_part) ~ 5
+        )
+    ) %>%
+    select(studlab, contains("neer"))
+
+
+
+test_neer_2 <- data_cont %>%
+    group_by(studlab) %>%
+    mutate(
+        bin_neer = case_when(
+            all(total_neer_2_part > c(total_neer_1_part, total_neer_3_part, total_neer_4_part)) ~ 2,
+            all(total_neer_3_part > c(total_neer_1_part, total_neer_2_part, total_neer_4_part)) ~ 3,
+            all(total_neer_4_part > c(total_neer_1_part, total_neer_2_part, total_neer_3_part)) ~ 4,
+            TRUE ~ 0
+        )
+    ) %>%
+    select(studlab, contains("neer"))
+
+
+test_neer_2 %>%
+    ungroup() %>%
+    distinct(bin_neer)
+testthat::expect_equal(test_neer_2, test_neer)
+
+
+
+
+
+test_grid <- sel_grid_func %>%
+    filter(intervention == "all") %>%
+    head(n = 5000) %>%
+    slice_head(n = 50000) %>%
+    future_pmap(.,
+        do_subset,
+        df = data_func
+    ) %>%
+    set_names(seq_along(.)) %>%
+    discard(~ is.null(.x))
+
+
+
 
 data_cont %>%
     group_by(studlab) %>%
