@@ -3,6 +3,7 @@
 ## TODO:
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
+## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
 
 
 ## Udgået:
@@ -238,13 +239,13 @@ data_qol <- data_cont %>%
   filter(outcome %in% qol_outcomes) %>%
   make_binary() %>%
   select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
-  data.table()
+  as.data.table()
 
 data_func <- data_cont %>%
   filter(outcome %in% c("cs", prom_outcomes)) %>%
   make_binary() %>%
   select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
-  data.table()
+  as.data.table()
 
 # Create selection grids  ---------------------------------------------------
 

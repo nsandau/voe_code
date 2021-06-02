@@ -1,6 +1,86 @@
 
 ###
 
+
+null_outcs <- list()
+null_intervs <- list()
+for (int in unique(data_func$interv)) {
+    for (outc in unique(data_func$bin_outcome)) {
+        n_rows <- data_func %>%
+            filter(interv == int, bin_outcome == outc) %>%
+            nrow()
+        cat(int, outc, n_rows, "\n")
+
+        if (n_rows == 0) {
+            null_outcs <- c(null_outcs, list(outc))
+            null_intervs <- c(null_intervs, list(int))
+        }
+    }
+}
+
+null_intervs <- unlist(null_intervs)
+null_outcs <- unlist(null_outcs)
+
+null_list <- idf_null_int_out(data_qol)
+
+null_intervs <- null_list[["null_intervs"]]
+
+null_outcs <- null_list[["null_outcs"]]
+
+for (i in seq_along(null_intervs)) {
+    if (i == 1) {
+        test_grid <- sel_grid_qol
+    }
+    cat(null_intervs[[i]], null_outcs[[i]], "\n")
+    test_grid <- test_grid[!(intervention == null_intervs[[i]] & outcome == null_outcs[[i]])]
+}
+
+all(sel_grid_qol %>% distinct(outcome) == test_grid %>% distinct(outcome))
+all(sel_grid_qol %>% distinct(intervention) == test_grid %>% distinct(intervention))
+
+sel_grid_qol %>%
+    distinct(intervention) %>%
+    sort()
+test_grid %>% distinct(intervention)
+
+nrow(sel_grid_qol)
+nrow(test_grid)
+
+test_grid %>% distinct(intervention)
+test_grid %>% nrow()
+test_grid[1:1000, ] %>% View()
+
+
+
+
+
+
+null_outcs %>%
+    unlist() %>%
+    length()
+null_intervs %>%
+    unlist() %>%
+    length()
+
+
+
+
+
+grid_dropped <- sel_grid_func %>%
+    filter(intervention != "k-wires", outcome != 3) %>%
+    nrow()
+
+grid_dropped
+
+nrow(sel_grid_func) - grid_dropped
+
+int <- "tension-band"
+outc <- 1
+
+data_func %>%
+    filter(interv == int, bin_outcome == outc)
+
+
 null_subs <- subsets_func %>% keep(~ is.null(.x))
 
 

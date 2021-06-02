@@ -72,6 +72,31 @@ make_binary <- function(df) {
         return()
 }
 
+#### IDENTIFY NON-EXISTANT INTERV / OUTCOME COMBINATIONS
+
+idf_null_int_out <- function(df) {
+    null_outcs <- list()
+    null_intervs <- list()
+    for (int in unique(df$interv)) {
+        for (outc in unique(df$bin_outcome)) {
+            n_rows <- df %>%
+                filter(interv == int, bin_outcome == outc) %>%
+                nrow()
+            # cat(int, outc, n_rows, "\n")
+
+            if (n_rows == 0) {
+                null_outcs <- c(null_outcs, list(outc))
+                null_intervs <- c(null_intervs, list(int))
+            }
+        }
+    }
+    out <- list(null_intervs = unlist(null_intervs), null_outcs = unlist(null_outcs))
+    return(out)
+}
+
+
+
+
 ### CREATE SELECTION GRID
 make_sel_grid <- function(df, outcome_type = NULL) {
     testthat::expect_true(outcome_type %in% c("qol", "func"))
@@ -89,7 +114,9 @@ make_sel_grid <- function(df, outcome_type = NULL) {
     # outcome
     interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
 
-    expand_grid(
+
+    # create grid
+    grid <- expand_grid(
         language = unique(df$bin_lang),
         year = unique(df$bin_year),
         design = unique(df$bin_design),
@@ -109,7 +136,24 @@ make_sel_grid <- function(df, outcome_type = NULL) {
             across(where(is.numeric), as.integer),
             across(where(is.character), as_factor)
         ) %>%
-        return()
+        as.data.table()
+
+    nrow_before <- nrow(grid)
+    cat("Rows before removal of null int/out combs:", nrow_before, "\n")
+
+    # remove non-existant combinations of interv and outcome
+    list_of_combs <- idf_null_int_out(df)
+    null_intervs <- list_of_combs[["null_intervs"]]
+    null_outcs <- list_of_combs[["null_outcs"]]
+
+    for (i in seq_along(null_intervs)) {
+        grid <- grid[!(intervention == null_intervs[[i]] & outcome == null_outcs[[i]])]
+    }
+    nrow_after <- nrow(grid)
+    cat("Rows after removal of null int/out combs:", nrow_after, "\n")
+    cat("Rows removed:", nrow_before - nrow_after, "\n")
+
+    return(grid)
 }
 
 ### SUBSET FUNCTION
