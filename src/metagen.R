@@ -1,14 +1,10 @@
 ### NOTER
 
-### tester erda gitpull
-
-
 ## TODO:
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
 ## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
 ## lave func der flytter filer ud til erda
-## Writing FUNC subsets: 31055.3 sec elapsed
 
 
 ## Udgået:
@@ -36,7 +32,8 @@ pacman::p_load(
   tictoc,
   data.table,
   tidyverse,
-  arrow
+  arrow,
+  lobstr
 )
 
 # PRINT INFO
@@ -249,12 +246,15 @@ data_func <- data_cont %>%
   select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
   as.data.table()
 
+
 # Create selection grids  ---------------------------------------------------
+
 
 tictoc::tic("QoL selection grid")
 sel_grid_qol <- data_qol %>%
   make_sel_grid(outcome_type = "qol")
 tictoc::toc()
+cat("Mem usage:", mem_used() / 1024 / 1024)
 
 tic("Writing sel_grid_qol")
 write_feather(sel_grid_qol, "output/sel_grid_qol.feather")
@@ -264,6 +264,9 @@ tictoc::tic("Functional outcome selection grid")
 sel_grid_func <- data_func %>%
   make_sel_grid(outcome_type = "func")
 tictoc::toc()
+cat("Mem usage:", mem_used() / 1024 / 1024)
+
+
 
 tic("Writing sel_grid_func")
 write_feather(sel_grid_func, "output/sel_grid_func.feather")
@@ -282,6 +285,7 @@ subsets_qol <- sel_grid_qol %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
 toc()
+cat("Mem usage:", mem_used() / 1024 / 1024)
 
 # tic("Writing QOL subsets")
 # write_rds(subsets_qol, here::here("output", "subsets_qol.rds"))
@@ -298,6 +302,7 @@ subsets_func <- sel_grid_func %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
 toc()
+cat("Mem usage:", mem_used() / 1024 / 1024)
 
 # tic("Writing FUNC subsets")
 # write_rds(subsets_func, here::here("output", "subsets_func.rds"))
@@ -311,17 +316,21 @@ multi_out_qol_splits <- subsets_qol %>%
   keep(~ any(duplicated(.x[["studlab"]]))) %>%
   future_map(split_multi_outc)
 
-
 # concat lsits
-subsets_qol_final <- c(
+subsets_qol <- c(
   subsets_qol %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
   multi_out_qol_splits %>% flatten()
 )
 tictoc::toc()
 
+rm(multi_out_qol_splits)
+
+cat("Mem usage:", mem_used() / 1024 / 1024)
+
+
 # tic("Writing subsets_qol_final")
-# write_rds(subsets_func_final, here::here("output", "subsets_qol_final.rds"))
+# write_rds(subsets_func, here::here("output", "subsets_qol.rds"))
 # toc()
 
 ## FUNCTIONAL OUTCOME
@@ -330,43 +339,45 @@ tictoc::tic("Multi outcome split func")
 multi_out_func_splits <- subsets_func %>%
   keep(~ any(duplicated(.x[["studlab"]]))) %>%
   future_map(split_multi_outc)
-tictoc::toc()
 
-subsets_func_final <- c(
+subsets_func <- c(
   subsets_func %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
   multi_out_qol_splits %>% flatten()
 )
+tictoc::toc()
+rm(multi_out_func_splits)
+cat("Mem usage:", mem_used() / 1024 / 1024)
 
-# tic("Writing subsets_func_final")
-# write_rds(subsets_func_final, here::here("output", "subsets_func_final.rds"))
+# tic("Writing subsets_func")
+# write_rds(subsets_func, here::here("output", "subsets_func.rds"))
 # toc()
 
 
 # Conduct metagen ---------------------------------------------------------
 
 # QOL
-results_qol <- subsets_qol_final %>%
+results_qol <- subsets_qol %>%
   future_map(~ do_metagen(.x))
 
-results_qol_final <- results_qol %>% extract_metagen()
-pvals_qol <- results_qol_final %>% gather_pvals()
+results_qol_df <- results_qol %>% extract_metagen()
+pvals_qol <- results_qol_df %>% gather_pvals()
 
 tic("Writing results QOL")
-write_feather(results_qol_final, here::here("output", "results_qol_final.feather"))
+write_feather(results_qol_df, here::here("output", "results_qol_df.feather"))
 write_feather(pvals_qol, here::here("output", "pvals_qol.feather"))
 toc()
 
 
 # FUNCTIONAL OUTCOME
-results_func <- subsets_func_final %>%
+results_func <- subsets_func %>%
   future_map(~ do_metagen(.x))
 
-results_func_final <- results_func %>% extract_metagen()
-pvals_func <- results_func_final %>% gather_pvals()
+results_func_df <- results_func %>% extract_metagen()
+pvals_func <- results_func_df %>% gather_pvals()
 
 tic("Writing results FUNC")
-write_feather(results_func_final, here::here("output", "results_func_final.feather"))
+write_feather(results_func_df, here::here("output", "results_func_df.feather"))
 write_feather(pvals_func, here::here("output", "pvals_func.feather"))
 toc()
 
