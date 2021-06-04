@@ -12,12 +12,13 @@
 # sample_n: none smaller than min requirement (15)
 # time to follow-up: ingen under 12 mdr
 
-# LIBRARIES ---------------------------------------------------------------
+# ONLY ERDA ---------------------------------------------------------------
 
-## INDTIL DA:
-## lib <- .libPaths("/home/kmd592_ku_dk/modi_mount/R_lib")
-## install.packages("pacman", repos = "https://cloud.r-project.org/", lib = lib[1])
+lib <- .libPaths("/home/kmd592_ku_dk/modi_mount/R_lib")
+install.packages("pacman", repos = "https://cloud.r-project.org/", lib = lib[1])
 
+
+##### LIBRARIES
 pacman::p_load(
   esc,
   conflicted,
