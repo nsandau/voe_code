@@ -1,5 +1,8 @@
 ### NOTER
 
+### tester erda gitpull
+
+
 ## TODO:
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed

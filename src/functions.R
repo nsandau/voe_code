@@ -390,8 +390,8 @@ if (sys.nframe() == 0) { # if __name__ == __main__
             .f = do_subset,
             df = data_qol
         ) %>%
-        set_names(seq_along(.))  %>%
-    discard(~ is.null(.x))
+        set_names(seq_along(.)) %>%
+        discard(~ is.null(.x))
 
 
     subsets_func <- sel_grid_func %>%
