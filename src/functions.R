@@ -384,7 +384,7 @@ if (sys.nframe() == 0) { # if __name__ == __main__
 
     # do subsets
     subsets_qol <- sel_grid_qol %>%
-        slice_head(n = 100000) %>%
+        slice_head(n = 10000) %>%
         future_pmap(
             .l = .,
             .f = do_subset,

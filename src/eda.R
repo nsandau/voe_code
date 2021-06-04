@@ -1,5 +1,16 @@
 ###
 
+
+lobstr::mem_used() / 1024 / 1024
+
+gc()
+
+obj_sizes(subsets_qol)
+
+lobstr::mem_used()
+
+### MOVE DATA OUT FUNCTION _ NOT IMPLEMENTED
+
 from_path <- here("data")
 to_path <- "/home/nicolai/Desktop/voe_code/output"
 
@@ -14,14 +25,6 @@ getwd()
 test_list <- subsets_qol %>% discard(~ is.null(.x))
 test_tb <- tibble(col1 = test_list)
 
-
-microbenchmark::microbenchmark(
-    #    data.table::fwrite(test_tb, "data/write_test.csv"),
-    write_rds(sel_grid_qol, "data/write_test.rds"),
-    write_feather(sel_grid_qol, "data/write_test.feather"),
-    # readr
-    times = 10
-)
 
 
 
