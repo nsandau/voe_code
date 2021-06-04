@@ -4,6 +4,8 @@
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
 ## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
+## lave func der flytter filer ud til erda
+## Writing FUNC subsets: 31055.3 sec elapsed
 
 
 ## Udgået:
@@ -13,10 +15,9 @@
 
 # LIBRARIES ---------------------------------------------------------------
 
-### SKAL LAVE ET DOCKER IMAGE DER ALLEREDE HAR INSTALLERET PACKAGES.
 ## INDTIL DA:
 ## lib <- .libPaths("/home/kmd592_ku_dk/modi_mount/R_lib")
-## install.packages("pacman", repos = "https://mirrors.dotsrc.org/cran/", lib = lib[1])
+## install.packages("pacman", repos = "https://cloud.r-project.org/", lib = lib[1])
 
 pacman::p_load(
   esc,
@@ -24,25 +25,24 @@ pacman::p_load(
   janitor,
   furrr,
   testthat,
-  magrittr,
   readxl,
   here,
   lubridate,
-  dplyr,
-  stringr,
   purrr,
-  tidyr,
-  forcats,
   benchmarkme,
   tictoc,
   data.table,
-  update = FALSE
+  tidyverse,
+  arrow
 )
 
-# settings
+# PRINT INFO
 cores <- future::availableCores()
 ram <- benchmarkme::get_ram()
 cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
+cat("Current dir:", getwd(), "\n")
+
+# settings
 plan(multicore, workers = cores)
 
 conflict_prefer("filter", "dplyr")
@@ -234,7 +234,6 @@ expect_true(all(ttfu_test$bin_ttfu == 1))
 
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 
-## OBS - BEHØVER IKKE OUTCOME MED!
 data_qol <- data_cont %>%
   filter(outcome %in% qol_outcomes) %>%
   make_binary() %>%
@@ -249,25 +248,28 @@ data_func <- data_cont %>%
 
 # Create selection grids  ---------------------------------------------------
 
-print("Starting QoL selection grid")
-tictoc::tic()
+tictoc::tic("QoL selection grid")
 sel_grid_qol <- data_qol %>%
   make_sel_grid(outcome_type = "qol")
 tictoc::toc()
 
+tic("Writing sel_grid_qol")
+write_feather(sel_grid_qol, "output/sel_grid_qol.feather")
+toc()
 
-print("Starting functional outcome selection grid")
-tictoc::tic()
+tictoc::tic("Functional outcome selection grid")
 sel_grid_func <- data_func %>%
   make_sel_grid(outcome_type = "func")
 tictoc::toc()
 
+tic("Writing sel_grid_func")
+write_feather(sel_grid_func, "output/sel_grid_func.feather")
+toc()
 
 # Subset data -------------------------------------------------------------
 
 ##### QoL
-print("Starting subset of QoL")
-tictoc::tic()
+tic("Subset of QoL")
 subsets_qol <- sel_grid_qol %>%
   future_pmap(
     .l = .,
@@ -276,13 +278,14 @@ subsets_qol <- sel_grid_qol %>%
   ) %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
-tictoc::toc()
+toc()
 
-write_rds(subsets_qol, here::here("output", "subsets_qol.rds"))
+# tic("Writing QOL subsets")
+# write_rds(subsets_qol, here::here("output", "subsets_qol.rds"))
+# toc()
 
-
-print("Starting subset of functional outcome")
-tictoc::tic()
+#### FUNCTIONAL OUTCOME
+tic("Subset of functional outcome")
 subsets_func <- sel_grid_func %>%
   future_pmap(
     .l = .,
@@ -291,36 +294,40 @@ subsets_func <- sel_grid_func %>%
   ) %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
-tictoc::toc()
+toc()
 
-write_rds(subsets_func, here::here("output", "subsets_func.rds"))
-
+# tic("Writing FUNC subsets")
+# write_rds(subsets_func, here::here("output", "subsets_func.rds"))
+# toc()
 
 ###### split multiple outcome dfs
 
-# QoL
-
-tictoc::tic()
+## QOL
+tictoc::tic("Multi outcome split QOL")
 multi_out_qol_splits <- subsets_qol %>%
   keep(~ any(duplicated(.x[["studlab"]]))) %>%
   future_map(split_multi_outc)
-tictoc::toc()
-
-## Functional outcome
-
-tictoc::tic()
-multi_out_func_splits <- subsets_func %>%
-  keep(~ any(duplicated(.x[["studlab"]]))) %>%
-  future_map(split_multi_outc)
-tictoc::toc()
 
 
-# Concatenate list of split dfs with original list
+# concat lsits
 subsets_qol_final <- c(
   subsets_qol %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
   multi_out_qol_splits %>% flatten()
 )
+tictoc::toc()
+
+# tic("Writing subsets_qol_final")
+# write_rds(subsets_func_final, here::here("output", "subsets_qol_final.rds"))
+# toc()
+
+## FUNCTIONAL OUTCOME
+
+tictoc::tic("Multi outcome split func")
+multi_out_func_splits <- subsets_func %>%
+  keep(~ any(duplicated(.x[["studlab"]]))) %>%
+  future_map(split_multi_outc)
+tictoc::toc()
 
 subsets_func_final <- c(
   subsets_func %>%
@@ -328,72 +335,37 @@ subsets_func_final <- c(
   multi_out_qol_splits %>% flatten()
 )
 
+# tic("Writing subsets_func_final")
+# write_rds(subsets_func_final, here::here("output", "subsets_func_final.rds"))
+# toc()
+
+
 # Conduct metagen ---------------------------------------------------------
-### NÅET HERTIL!
 
+# QOL
+results_qol <- subsets_qol_final %>%
+  future_map(~ do_metagen(.x))
 
-results_cs <- subset_cs_final %>%
-  future_map(~ do_metagen(.x),
-    .options = future_options(packages = c("meta", "stringr"))
-  )
-plan(sequential)
-
-plan(multiprocess, workers = 6)
-results_prom <- subset_prom_final %>%
-  future_map(~ do_metagen(.x),
-    .options = future_options(packages = c("meta", "stringr"))
-  )
-plan(sequential)
-
-plan(multiprocess, workers = 6)
-results_qol <- subset_qol_final %>%
-  future_map(~ do_metagen(.x),
-    .options = future_options(packages = c("meta", "stringr"))
-  )
-plan(sequential)
-
-
-
-# extract results
-
-results_cs_final <- results_cs %>% extract_metagen()
-results_prom_final <- results_prom %>% extract_metagen()
 results_qol_final <- results_qol %>% extract_metagen()
-
-## gather pvals
-
-pvals_cs <- results_cs_final %>% gather_pvals()
-pvals_prom <- results_prom_final %>% gather_pvals()
 pvals_qol <- results_qol_final %>% gather_pvals()
 
+tic("Writing results QOL")
+write_feather(results_qol_final, here::here("output", "results_qol_final.feather"))
+write_feather(pvals_qol, here::here("output", "pvals_qol.feather"))
+toc()
 
 
+# FUNCTIONAL OUTCOME
+results_func <- subsets_func_final %>%
+  future_map(~ do_metagen(.x))
 
-# GRAPHING ----------------------------------------------------------------
+results_func_final <- results_func %>% extract_metagen()
+pvals_func <- results_func_final %>% gather_pvals()
 
-
-
-# geom point
-
-
-### PROMS
-pvals_prom %>% ggplot(aes(x = estimate, y = pval, color = k)) +
-  geom_point() +
-  scale_color_viridis_c() +
-  scale_y_log10() +
-  geom_hline(yintercept = 0.05)
-
-### QOL
-pvals_qol %>% ggplot(aes(x = estimate, y = pval, color = k)) +
-  geom_point() +
-  scale_color_viridis_c() +
-  scale_y_log10() +
-  geom_hline(yintercept = 0.05)
+tic("Writing results FUNC")
+write_feather(results_func_final, here::here("output", "results_func_final.feather"))
+write_feather(pvals_func, here::here("output", "pvals_func.feather"))
+toc()
 
 
-# evt køre geom_pointdensity på alle for at vise hvor størstedelen af resultaterne ligger?
-# pval_gathered %>%  ggplot(aes(x = estimate, y = pval)) +
-#  geom_pointdensity() +
-#  scale_color_viridis_c() +
-#  geom_hline( yintercept = 0.05) +
-#  scale_y_log10()
+# COPY FILES TO erda storage

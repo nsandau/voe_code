@@ -1,3 +1,6 @@
+
+# MAKE BINARYS ----------------------------------------
+
 make_binary <- function(df) {
     df %>%
         group_by(studlab) %>%
@@ -72,7 +75,7 @@ make_binary <- function(df) {
         return()
 }
 
-#### IDENTIFY NON-EXISTANT INTERV / OUTCOME COMBINATIONS
+#### IDENTIFY NON-EXISTANT INTERV / OUTCOME COMBINATIONS ----------------------------------------
 
 idf_null_int_out <- function(df) {
     null_outcs <- list()
@@ -96,8 +99,8 @@ idf_null_int_out <- function(df) {
 
 
 
+### CREATE SELECTION GRID ------------------------------------------------------------
 
-### CREATE SELECTION GRID
 make_sel_grid <- function(df, outcome_type = NULL) {
     testthat::expect_true(outcome_type %in% c("qol", "func"))
 
@@ -156,7 +159,8 @@ make_sel_grid <- function(df, outcome_type = NULL) {
     return(grid)
 }
 
-### SUBSET FUNCTION
+### SUBSET FUNCTION --------------------
+
 do_subset <- function(df,
                       language,
                       year,
@@ -268,6 +272,7 @@ do_subset <- function(df,
     }
 }
 
+# split multi outcome -----------------------------------------
 
 split_multi_outc <- function(df) {
     split_dfs <- df %>%
@@ -302,6 +307,68 @@ split_multi_outc <- function(df) {
 }
 
 
+
+# do metagen --------------------------------------------------------------
+
+do_metagen <- function(data) {
+    metagen(
+        TE = smd,
+        seTE = se,
+        hakn = FALSE,
+        method.tau = "DL",
+        studlab = studlab,
+        data = data
+    )
+}
+
+# extract results metagen -------------------------------------------------
+
+extract_metagen <- function(data) {
+    data %>%
+        map_dbl("TE.fixed") %>%
+        enframe(name = "iteration", "te.fixed") %>%
+        mutate(
+            sete.fixed = map_dbl(data, "seTE.fixed"),
+            lower.fixed = map_dbl(data, "lower.fixed"),
+            upper.fixed = map_dbl(data, "upper.fixed"),
+            pval.fixed = map_dbl(data, "pval.fixed"),
+            te.random = map_dbl(data, "TE.random"),
+            sete.random = map_dbl(data, "seTE.random"),
+            lower.random = map_dbl(data, "lower.random"),
+            upper.random = map_dbl(data, "upper.random"),
+            pval.random = map_dbl(data, "pval.random"),
+            i2 = map_dbl(data, "I2"),
+            q = map_dbl(data, "Q"),
+            pval.q = map_dbl(data, "pval.Q"),
+            k = map_dbl(data, "k"),
+            studlab = map_chr(data, ~ str_flatten(.x$studlab, collapse = " "))
+        )
+}
+
+# gather pvals ------------------------------------------------------------
+
+gather_pvals <- function(data) {
+    data %>%
+        transmute(
+            pval = pval.fixed,
+            estimate = te.fixed,
+            k = k,
+            method = "fixed"
+        ) %>%
+        bind_rows(
+            .,
+            data %>%
+                transmute(
+                    pval = pval.random,
+                    estimate = te.random,
+                    k = k,
+                    method = "random"
+                )
+        ) %>%
+        distinct()
+}
+
+
 if (sys.nframe() == 0) { # if __name__ == __main__
 
     ## TESTING
@@ -317,13 +384,13 @@ if (sys.nframe() == 0) { # if __name__ == __main__
 
     # do subsets
     subsets_qol <- sel_grid_qol %>%
-        slice_head(n = 50000) %>%
+        slice_head(n = 100000) %>%
         future_pmap(
             .l = .,
             .f = do_subset,
             df = data_qol
         ) %>%
-        set_names(seq_along(.)) # %>%
+        set_names(seq_along(.))  %>%
     discard(~ is.null(.x))
 
 

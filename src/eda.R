@@ -1,6 +1,32 @@
-
 ###
 
+from_path <- here("data")
+to_path <- "/home/nicolai/Desktop/voe_code/output"
+
+## CREATE DIR WITH DATE
+
+file_paths <- list.files(from_path, ".feather$")
+file.copy(file_paths, to_path)
+
+
+getwd()
+
+test_list <- subsets_qol %>% discard(~ is.null(.x))
+test_tb <- tibble(col1 = test_list)
+
+
+microbenchmark::microbenchmark(
+    #    data.table::fwrite(test_tb, "data/write_test.csv"),
+    write_rds(sel_grid_qol, "data/write_test.rds"),
+    write_feather(sel_grid_qol, "data/write_test.feather"),
+    # readr
+    times = 10
+)
+
+
+
+
+###
 
 null_outcs <- list()
 null_intervs <- list()
