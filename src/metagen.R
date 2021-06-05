@@ -4,7 +4,6 @@
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
 ## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
-## lave func der flytter filer ud til erda
 
 
 ## Udgået:
@@ -12,6 +11,7 @@
 # sample_n: none smaller than min requirement (15)
 # time to follow-up: ingen under 12 mdr
 
+### ARGUMENTS
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0) {
@@ -34,10 +34,8 @@ MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 LIB_PATHS <- .libPaths(file.path(MODI_PATH, "R_lib"))
 
-# ONLY ERDA ---------------------------------------------------------------
 
 install.packages("pacman", repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
-
 
 ##### LIBRARIES
 pacman::p_load(
@@ -64,7 +62,6 @@ ram <- benchmarkme::get_ram()
 cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 cat("Current dir:", getwd(), "\n")
 
-
 conflict_prefer("filter", "dplyr")
 conflict_prefer("between", "dplyr")
 conflict_prefer("year", "lubridate")
@@ -86,7 +83,8 @@ data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
 
 # STRINGS FOR FILTERING ---------------------------------------------------
 
-prom_outcomes <- c(
+func_outcomes <- c(
+  "cs",
   "oss",
   "ases",
   "sane",
@@ -103,7 +101,6 @@ qol_outcomes <- c(
   "sf36pcs",
   "vr12"
 )
-cont_outcomes <- c(prom_outcomes, "cs", qol_outcomes)
 bin_outcomes <- c(
   "revision",
   "complications",
@@ -120,6 +117,14 @@ bin_outcomes <- c(
   "nonunion",
   "stiffness"
 )
+
+cont_outcomes <- c(func_outcomes, qol_outcomes)
+
+OUTCOME_VARS <- if (OUTCOME == "qol") {
+  qol_outcomes
+} else if (OUTCOME == "func") {
+  func_outcomes
+}
 
 nrsi_studies <- data_extract %>%
   filter(str_detect(design, "nrsi")) %>%
@@ -157,12 +162,10 @@ data_extract <- data_extract %>%
     )) %>%
   select(-c(n, lost_to_fu), -starts_with("neer"))
 
-
 # TEST: NO STUDY HAS < 15 samples
 expect_true(all(data_extract$total_n - replace_na(data_extract$total_loss_to_fu, 0) > 15))
 
 # RESHAPE DF --------------------------------------------------------------
-
 data_cont <- data_extract %>%
   select(
     -starts_with(all_of(bin_outcomes))
@@ -254,42 +257,22 @@ expect_true(all(ttfu_test$bin_ttfu == 1))
 
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 
-data_qol <- data_cont %>%
-  filter(outcome %in% qol_outcomes) %>%
+data <- data_cont %>%
+  filter(outcome %in% OUTCOME_VARS) %>%
   make_binary() %>%
   select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
   as.data.table()
-
-data_func <- data_cont %>%
-  filter(outcome %in% c("cs", prom_outcomes)) %>%
-  make_binary() %>%
-  select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
-  as.data.table()
-
 
 # Create selection grids  ---------------------------------------------------
 
-
-tictoc::tic("QoL selection grid")
-sel_grid_qol <- data_qol %>%
-  make_sel_grid(outcome_type = "qol")
+tictoc::tic("Selection grid")
+sel_grid <- data %>%
+  make_sel_grid(outcome_type = OUTCOME)
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-tic("Writing sel_grid_qol")
-write_feather(sel_grid_qol, "output/sel_grid_qol.feather")
-toc()
-
-tictoc::tic("Functional outcome selection grid")
-sel_grid_func <- data_func %>%
-  make_sel_grid(outcome_type = "func")
-tictoc::toc()
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-
-
-tic("Writing sel_grid_func")
-write_feather(sel_grid_func, "output/sel_grid_func.feather")
+tic("Writing sel_grid")
+write_feather(sel_grid, "output/sel_grid.feather")
 toc()
 
 # Subset data -------------------------------------------------------------
@@ -297,12 +280,12 @@ toc()
 ##### QoL
 plan(multicore, workers = cores)
 
-tic("Subset of QoL")
-subsets_qol <- sel_grid_qol %>%
+tic("Subsets")
+subsets <- sel_grid %>%
   future_pmap(
     .l = .,
     .f = do_subset,
-    df = data_qol
+    df = data
   ) %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
@@ -311,106 +294,57 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 plan(sequential)
 # tic("Writing QOL subsets")
-# write_rds(subsets_qol, here::here("output", "subsets_qol.rds"))
-# toc()
-
-#### FUNCTIONAL OUTCOME
-tic("Subset of functional outcome")
-subsets_func <- sel_grid_func %>%
-  future_pmap(
-    .l = .,
-    .f = do_subset,
-    df = data_func
-  ) %>%
-  set_names(seq_along(.)) %>%
-  discard(~ is.null(.x))
-toc()
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-# tic("Writing FUNC subsets")
-# write_rds(subsets_func, here::here("output", "subsets_func.rds"))
+# write_rds(subsets, here::here("output", "subsets.rds"))
 # toc()
 
 ###### split multiple outcome dfs
 
-## QOL
-tictoc::tic("Multi outcome split QOL")
-multi_out_qol_splits <- subsets_qol %>%
+plan(multicore, workers = cores)
+
+tictoc::tic("Multi outcome split ")
+multi_out_splits <- subsets %>%
   keep(~ any(duplicated(.x[["studlab"]]))) %>%
   future_map(split_multi_outc)
+
+plan(sequential)
 
 # concat lsits
-subsets_qol <- c(
-  subsets_qol %>%
+subsets <- c(
+  subsets %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
-  multi_out_qol_splits %>% flatten()
+  multi_out_splits %>% flatten()
 )
 tictoc::toc()
 
-rm(multi_out_qol_splits)
+rm(multi_out_splits)
 
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
-# tic("Writing subsets_qol_final")
-# write_rds(subsets_func, here::here("output", "subsets_qol.rds"))
-# toc()
-
-## FUNCTIONAL OUTCOME
-
-tictoc::tic("Multi outcome split func")
-multi_out_func_splits <- subsets_func %>%
-  keep(~ any(duplicated(.x[["studlab"]]))) %>%
-  future_map(split_multi_outc)
-
-subsets_func <- c(
-  subsets_func %>%
-    discard(~ any(duplicated(.x[["studlab"]]))),
-  multi_out_qol_splits %>% flatten()
-)
-tictoc::toc()
-rm(multi_out_func_splits)
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-# tic("Writing subsets_func")
-# write_rds(subsets_func, here::here("output", "subsets_func.rds"))
+# tic("Writing subsets_final")
+# write_rds(subsets, here::here("output", "subsets.rds"))
 # toc()
 
 
 # Conduct metagen ---------------------------------------------------------
-
-# QOL
-results_qol <- subsets_qol %>%
+plan(multicore, workers = cores)
+results <- subsets %>%
   future_map(~ do_metagen(.x))
+plan(sequential)
 
-results_qol_df <- results_qol %>% extract_metagen()
-pvals_qol <- results_qol_df %>% gather_pvals()
+results_df <- results %>% extract_metagen()
+pvals <- results_df %>% gather_pvals()
 
-tic("Writing results QOL")
-write_feather(results_qol_df, here::here("output", "results_qol_df.feather"))
-write_feather(pvals_qol, here::here("output", "pvals_qol.feather"))
-toc()
-
-
-# FUNCTIONAL OUTCOME
-results_func <- subsets_func %>%
-  future_map(~ do_metagen(.x))
-
-results_func_df <- results_func %>% extract_metagen()
-pvals_func <- results_func_df %>% gather_pvals()
-
-tic("Writing results FUNC")
-write_feather(results_func_df, here::here("output", "results_func_df.feather"))
-write_feather(pvals_func, here::here("output", "pvals_func.feather"))
+tic("Writing results ")
+write_feather(results_df, here::here("output", "results_df.feather"))
+write_feather(pvals, here::here("output", "pvals.feather"))
 toc()
 
 
 # COPY FILES TO erda storage
 
-### GØRE SÅ DET BLIVER KOPIERET IND FOR HVERT OUTCOME!
-
 from_path <- here::here("output")
-to_path <- file.path(ERDA_PATH, "VOE_OUTPUT", DATE)
+to_path <- file.path(ERDA_PATH, OUTCOME, "VOE_OUTPUT", DATE)
 dir.create(to_path, recursive = T)
 file_paths <- list.files(from_path, ".rds$|.feather$")
 file.copy(file_paths, to_path)
