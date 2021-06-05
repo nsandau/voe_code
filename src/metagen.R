@@ -5,7 +5,6 @@
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
 ## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
 
-
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
 # sample_n: none smaller than min requirement (15)
@@ -18,7 +17,7 @@ if (length(args) == 0) {
   stop("Need to supply outcome", call. = FALSE)
 }
 # define outcome
-expect_true(args[1] %in% c("qol", "func"))
+testthat::expect_true(args[1] %in% c("qol", "func"))
 OUTCOME <- args[1]
 
 # if second argument given: conduct dev-run
@@ -33,7 +32,6 @@ ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
 MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 LIB_PATHS <- .libPaths(file.path(MODI_PATH, "R_lib"))
-
 
 install.packages("pacman", repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
 
@@ -53,7 +51,8 @@ pacman::p_load(
   data.table,
   tidyverse,
   arrow,
-  lobstr
+  lobstr,
+  meta
 )
 
 # PRINT INFO
@@ -79,7 +78,7 @@ data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
   rename(studlab = study_identifier) %>%
   select(-notes)
 
-# write_rds(data_extract, here("data", "data_extract.rds"))
+# write_rds(data_extract, here("data", data_extract.rds))
 
 # STRINGS FOR FILTERING ---------------------------------------------------
 
@@ -272,12 +271,15 @@ tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 tic("Writing sel_grid")
-write_feather(sel_grid, "output/sel_grid.feather")
+write_feather(sel_grid, here::here("output", paste0("sel_grid_", OUTCOME, ".feather")))
 toc()
 
 # Subset data -------------------------------------------------------------
 
-##### QoL
+if (DEV_RUN == TRUE) {
+  sel_grid <- sel_grid %>% slice_sample(n = 20000)
+}
+
 plan(multicore, workers = cores)
 
 tic("Subsets")
@@ -293,8 +295,9 @@ toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 plan(sequential)
+
 # tic("Writing QOL subsets")
-# write_rds(subsets, here::here("output", "subsets.rds"))
+# write_rds(subsets, here::here("output", paste0("subsets_", OUTCOME, ".rds")))
 # toc()
 
 ###### split multiple outcome dfs
@@ -308,7 +311,7 @@ multi_out_splits <- subsets %>%
 
 plan(sequential)
 
-# concat lsits
+# concat lists
 subsets <- c(
   subsets %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
@@ -320,11 +323,9 @@ rm(multi_out_splits)
 
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-
 # tic("Writing subsets_final")
-# write_rds(subsets, here::here("output", "subsets.rds"))
+# write_rds(subsets, here::here("output", paste0("subsets_final_", OUTCOME, ".rds")))
 # toc()
-
 
 # Conduct metagen ---------------------------------------------------------
 plan(multicore, workers = cores)
@@ -336,15 +337,14 @@ results_df <- results %>% extract_metagen()
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_feather(results_df, here::here("output", "results_df.feather"))
-write_feather(pvals, here::here("output", "pvals.feather"))
+write_feather(results_df, here::here("output", paste0("results_df_", OUTCOME, ".feather")))
+write_feather(pvals, here::here("output", paste0("pvals_", OUTCOME, ".feather")))
 toc()
 
-
 # COPY FILES TO erda storage
-
 from_path <- here::here("output")
 to_path <- file.path(ERDA_PATH, OUTCOME, "VOE_OUTPUT", DATE)
 dir.create(to_path, recursive = T)
-file_paths <- list.files(from_path, ".rds$|.feather$")
+file_paths <- list.files(from_path, ".rds$|.feather$") %>%
+  str_subset(OUTCOME)
 file.copy(file_paths, to_path)
