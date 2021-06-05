@@ -11,12 +11,11 @@ lobstr::mem_used()
 
 ### MOVE DATA OUT FUNCTION _ NOT IMPLEMENTED
 
-from_path <- here("data")
-to_path <- "/home/nicolai/Desktop/voe_code/output"
+from_path <- here::here("data")
+to_path <- file.path("/home/nicolai/Desktop/voe_output", DATE)
+dir.create(to_path)
 
-## CREATE DIR WITH DATE
-
-file_paths <- list.files(from_path, ".feather$")
+file_paths <- list.files(from_path, ".rds$|.feather$")
 file.copy(file_paths, to_path)
 
 
