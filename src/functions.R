@@ -102,7 +102,7 @@ idf_null_int_out <- function(df) {
 ### CREATE SELECTION GRID ------------------------------------------------------------
 
 make_sel_grid <- function(df, outcome_type = NULL) {
-    testthat::expect_true(outcome_type %in% c("qol", "func"))
+    expect_true(outcome_type %in% c("qol", "func"))
 
     if (outcome_type == "qol") {
         outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
@@ -412,7 +412,7 @@ if (sys.nframe() == 0) { # if __name__ == __main__
     multi_out_func <- subsets_func %>%
         keep(~ any(duplicated(.x[["studlab"]])))
 
-    tictoc::tic()
+    tic()
     multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
     tictoc::toc()
 

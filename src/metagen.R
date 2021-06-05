@@ -12,10 +12,31 @@
 # sample_n: none smaller than min requirement (15)
 # time to follow-up: ingen under 12 mdr
 
+args <- commandArgs(trailingOnly = TRUE)
+
+if (length(args) == 0) {
+  stop("Need to supply outcome", call. = FALSE)
+}
+# define outcome
+expect_true(args[1] %in% c("qol", "func"))
+OUTCOME <- args[1]
+
+# if second argument given: conduct dev-run
+if (is.na(args[2])) {
+  DEV_RUN <- FALSE
+} else {
+  DEV_RUN <- TRUE
+}
+
+BASE_PATH <- "/home/kmd592_ku_dk"
+ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
+MODI_PATH <- file.path(BASE_PATH, "modi_mount")
+DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
+LIB_PATHS <- .libPaths(file.path(MODI_PATH, "R_lib"))
+
 # ONLY ERDA ---------------------------------------------------------------
 
-lib <- .libPaths("/home/kmd592_ku_dk/modi_mount/R_lib")
-install.packages("pacman", repos = "https://cloud.r-project.org/", lib = lib[1])
+install.packages("pacman", repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
 
 
 ##### LIBRARIES
@@ -43,8 +64,6 @@ ram <- benchmarkme::get_ram()
 cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 cat("Current dir:", getwd(), "\n")
 
-# settings
-plan(multicore, workers = cores)
 
 conflict_prefer("filter", "dplyr")
 conflict_prefer("between", "dplyr")
@@ -255,7 +274,7 @@ tictoc::tic("QoL selection grid")
 sel_grid_qol <- data_qol %>%
   make_sel_grid(outcome_type = "qol")
 tictoc::toc()
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 tic("Writing sel_grid_qol")
 write_feather(sel_grid_qol, "output/sel_grid_qol.feather")
@@ -265,7 +284,7 @@ tictoc::tic("Functional outcome selection grid")
 sel_grid_func <- data_func %>%
   make_sel_grid(outcome_type = "func")
 tictoc::toc()
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
 
@@ -276,6 +295,8 @@ toc()
 # Subset data -------------------------------------------------------------
 
 ##### QoL
+plan(multicore, workers = cores)
+
 tic("Subset of QoL")
 subsets_qol <- sel_grid_qol %>%
   future_pmap(
@@ -286,8 +307,9 @@ subsets_qol <- sel_grid_qol %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
 toc()
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
+plan(sequential)
 # tic("Writing QOL subsets")
 # write_rds(subsets_qol, here::here("output", "subsets_qol.rds"))
 # toc()
@@ -303,7 +325,7 @@ subsets_func <- sel_grid_func %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
 toc()
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing FUNC subsets")
 # write_rds(subsets_func, here::here("output", "subsets_func.rds"))
@@ -327,7 +349,7 @@ tictoc::toc()
 
 rm(multi_out_qol_splits)
 
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
 # tic("Writing subsets_qol_final")
@@ -348,7 +370,7 @@ subsets_func <- c(
 )
 tictoc::toc()
 rm(multi_out_func_splits)
-cat("Mem usage:", mem_used() / 1024 / 1024)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets_func")
 # write_rds(subsets_func, here::here("output", "subsets_func.rds"))
@@ -384,3 +406,11 @@ toc()
 
 
 # COPY FILES TO erda storage
+
+### GØRE SÅ DET BLIVER KOPIERET IND FOR HVERT OUTCOME!
+
+from_path <- here::here("output")
+to_path <- file.path(ERDA_PATH, "VOE_OUTPUT", DATE)
+dir.create(to_path, recursive = T)
+file_paths <- list.files(from_path, ".rds$|.feather$")
+file.copy(file_paths, to_path)
