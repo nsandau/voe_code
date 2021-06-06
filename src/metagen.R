@@ -4,6 +4,18 @@
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
 ## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
+## Fix paths when copying
+## identify highest cardinality features and remove null combos
+
+# DEN LAVER DEN HER ERROR PÅ ERDA
+# Subsets: 4655.883 sec elapsed
+# Mem usage: 10079.65 mb
+# Error in mcfork(detached) :
+#  unable to fork, possible reason: Cannot allocate memory
+# Calls: %>% ... run.MulticoreFuture -> do.call -> <Anonymous> -> mcfork
+# Execution halted
+
+# DET ER NOK FORDI JEG SÆTTER PLAN OG SÅ KØRER KEEP PÅ SUBSETS? SÅ SKAL SUBSETS SENDES UD TIL ALLE WORKERS?!
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
@@ -302,22 +314,27 @@ plan(sequential)
 
 ###### split multiple outcome dfs
 
+subsets_multi_outc <- subsets %>%
+  keep(~ any(duplicated(.x[["studlab"]])))
+
 plan(multicore, workers = cores)
-
-tictoc::tic("Multi outcome split ")
-multi_out_splits <- subsets %>%
-  keep(~ any(duplicated(.x[["studlab"]]))) %>%
+tic("Multi outcome split ")
+multi_out_splits <- subsets_multi_outc %>%
   future_map(split_multi_outc)
-
 plan(sequential)
+toc()
+rm(subsets_multi_outc)
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
+
+tic("Concat subsets")
 # concat lists
 subsets <- c(
   subsets %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
   multi_out_splits %>% flatten()
 )
-tictoc::toc()
+toc()
 
 rm(multi_out_splits)
 
@@ -328,10 +345,12 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 # toc()
 
 # Conduct metagen ---------------------------------------------------------
+tic("Metagen")
 plan(multicore, workers = cores)
 results <- subsets %>%
   future_map(~ do_metagen(.x))
 plan(sequential)
+toc()
 
 results_df <- results %>% extract_metagen()
 pvals <- results_df %>% gather_pvals()
@@ -343,7 +362,7 @@ toc()
 
 # COPY FILES TO erda storage
 from_path <- here::here("output")
-to_path <- file.path(ERDA_PATH, OUTCOME, "VOE_OUTPUT", DATE)
+to_path <- file.path(ERDA_PATH, "VOE_OUTPUT", OUTCOME, DATE)
 dir.create(to_path, recursive = T)
 file_paths <- list.files(from_path, ".rds$|.feather$") %>%
   str_subset(OUTCOME)
