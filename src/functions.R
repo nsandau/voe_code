@@ -75,28 +75,36 @@ make_binary <- function(df) {
         return()
 }
 
-#### IDENTIFY NON-EXISTANT INTERV / OUTCOME COMBINATIONS ----------------------------------------
+#### Function to remove null_combinations in grid ----------------------------------------
 
-idf_null_int_out <- function(df) {
-    null_outcs <- list()
-    null_intervs <- list()
-    for (int in unique(df$interv)) {
-        for (outc in unique(df$bin_outcome)) {
-            n_rows <- df %>%
-                filter(interv == int, bin_outcome == outc) %>%
-                nrow()
-            # cat(int, outc, n_rows, "\n")
 
-            if (n_rows == 0) {
-                null_outcs <- c(null_outcs, list(outc))
-                null_intervs <- c(null_intervs, list(int))
+remove_nulls <- function(df, grid, list_of_combos) {
+    df <- df %>%
+        select(follow_up, bin_outcome, interv) %>%
+        rename(
+            outcome = bin_outcome,
+            intervention = interv
+        )
+
+
+    for (i in seq_along(list_of_combos)) {
+        var1 <- list_of_combos[[i]][1]
+        var2 <- list_of_combos[[i]][2]
+        var1_vals <- unique(df[[var1]])
+        var2_vals <- unique(df[[var2]])
+
+        for (val1 in var1_vals) {
+            for (val2 in var2_vals) {
+                n_rows <- df[get(var1) == val1 & get(var2) == val2] %>%
+                    nrow()
+                if (n_rows == 0) {
+                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+                }
             }
         }
     }
-    out <- list(null_intervs = unlist(null_intervs), null_outcs = unlist(null_outcs))
-    return(out)
+    return(grid)
 }
-
 
 
 ### CREATE SELECTION GRID ------------------------------------------------------------
@@ -142,20 +150,19 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         as.data.table()
 
     nrow_before <- nrow(grid)
-    cat("Rows before removal of null int/out combs:", nrow_before, "\n")
+    cat("Rows before removal of nulls:", nrow_before, "\n")
 
-    # remove non-existant combinations of interv and outcome
-    list_of_combs <- idf_null_int_out(df)
-    null_intervs <- list_of_combs[["null_intervs"]]
-    null_outcs <- list_of_combs[["null_outcs"]]
-
-    for (i in seq_along(null_intervs)) {
-        grid <- grid[!(intervention == null_intervs[[i]] & outcome == null_outcs[[i]])]
-    }
+    # remove null combinations
+    combs <- list(
+        c("follow_up", "outcome"),
+        c("intervention", "outcome"),
+        c("intervention", "follow_up")
+    )
+    grid <- remove_nulls(df, grid, combs)
     nrow_after <- nrow(grid)
-    cat("Rows after removal of null int/out combs:", nrow_after, "\n")
-    cat("Rows removed:", nrow_before - nrow_after, "\n")
-
+    cat("Rows after removal of nulls:", nrow_after, "\n")
+    nrow_diff <- nrow_before - nrow_after
+    cat("Rows removed:", nrow_diff, round(nrow_diff / nrow_before) * 100, "%", "\n")
     return(grid)
 }
 

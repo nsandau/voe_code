@@ -1,4 +1,79 @@
+
+df <- data
+grid <- read_feather("output/sel_grid_qol_full.feather")
+
+rows_bef <- nrow(grid)
+
+combs <- list(
+    c("follow_up", "outcome"),
+    c("intervention", "outcome"),
+    c("intervention", "follow_up")
+)
+
+grid_out <- remove_nulls(df, grid, combs)
+
+nrow(grid_out)
+
+nrow(grid)
+
+### start of func
+
+remove_nulls <- function(df, grid, list_of_combos) {
+    df <- df %>%
+        select(follow_up, bin_outcome, interv) %>%
+        rename(
+            outcome = bin_outcome,
+            intervention = interv
+        )
+
+
+    for (i in seq_along(combs)) {
+        var1 <- combs[[i]][1]
+        var2 <- combs[[i]][2]
+        var1_vals <- unique(df[[var1]])
+        var2_vals <- unique(df[[var2]])
+
+        for (val1 in var1_vals) {
+            for (val2 in var2_vals) {
+                n_rows <- df[get(var1) == val1 & get(var2) == val2] %>%
+                    nrow()
+                if (n_rows == 0) {
+                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+                }
+            }
+        }
+    }
+    return(grid)
+}
+
+
+
+
+
+
+
+grid
+
+list_of_combs <- idf_null_outc_fu(data)
+null_fus <- list_of_combs[["null_fus"]]
+null_outcs <- list_of_combs[["null_outcs"]]
+
+for (i in seq_along(null_fus)) {
+    grid <- grid[!(follow_up == null_fus[[i]] & outcome == null_outcs[[i]])]
+}
+nrow_after <- nrow(grid)
+
+nrow_after
+
+
+
 ###
+
+# HIGH CARDINALITY
+
+data %>%
+    tibble() %>%
+    summarize(across(everything(), n_distinct))
 
 
 lobstr::mem_used() / 1024 / 1024

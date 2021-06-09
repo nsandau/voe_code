@@ -14,8 +14,8 @@
 #  unable to fork, possible reason: Cannot allocate memory
 # Calls: %>% ... run.MulticoreFuture -> do.call -> <Anonymous> -> mcfork
 # Execution halted
-
-# DET ER NOK FORDI JEG SÆTTER PLAN OG SÅ KØRER KEEP PÅ SUBSETS? SÅ SKAL SUBSETS SENDES UD TIL ALLE WORKERS?!
+# det er nok fordi jeg inde i function laver split_dfs. Som så skal deles ud til alle workers?
+# kan enten lave dopar inde i func eller splitte til dfs inden jeg kører future_map?
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
