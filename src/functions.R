@@ -46,6 +46,12 @@ make_binary <- function(df) {
                 all(total_neer_3_part > c(total_neer_1_part, total_neer_2_part, total_neer_4_part)) ~ 3,
                 all(total_neer_4_part > c(total_neer_1_part, total_neer_2_part, total_neer_3_part)) ~ 4,
                 TRUE ~ 0
+            ),
+            bin_imputed = case_when(
+                imputed_outcome == "no" ~ 1,
+                str_detect(imputed_outcome, "yes|wrong") & !str_detect(imputed_vars, as.character(outcome)) ~ 1,
+                imputed_outcome == "yes" & str_detect(imputed_vars, as.character(outcome)) ~ 2,
+                imputed_outcome == "wrong" & str_detect(imputed_vars, as.character(outcome)) ~ 3
             )
         ) %>%
         group_by(studlab, outcome) %>%
@@ -141,7 +147,8 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         fu_period = unique(df$bin_fu_period),
         outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
         intervention = interv_vals,
-        neer = c(neer_vals, 98, 99) # 98: 3-part + 4-part, 99 ALL
+        neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
+        imputed = unique(df$bin_imputed)
     ) %>%
         mutate(
             across(where(is.numeric), as.integer),
@@ -182,7 +189,8 @@ do_subset <- function(df,
                       fu_period,
                       outcome_analysis,
                       intervention,
-                      neer) {
+                      neer,
+                      imputed) {
     # Simple selection vars
     sel_lang <- 1:language
     sel_year <- 1:year
@@ -192,6 +200,7 @@ do_subset <- function(df,
     sel_toi <- 1:toi
     sel_doctreat <- 1:doctreat
     sel_loss_fu <- 1:loss_fu
+    sel_imputed <- 1:imputed
 
     # outcomes
     if (!outcome %in% c(98, 99)) { # select specific outcomes
@@ -254,22 +263,25 @@ do_subset <- function(df,
     }
 
     # do subset
-    subset <- df[bin_lang %in% sel_lang &
-        bin_year %in% sel_year &
-        bin_design %in% sel_design &
-        bin_age %in% sel_age &
-        bin_34part %in% sel_34part &
-        bin_toi %in% sel_toi &
-        bin_doctreat %in% sel_doctreat &
-        bin_loss_fu %in% sel_loss_fu &
-        bin_outcome %in% sel_outcome &
-        follow_up %in% sel_follow_up &
-        bin_fu_longest %in% sel_fu_longest &
-        bin_fu_period %in% sel_fu_period &
-        bin_fu_period_long %in% sel_fu_period_long &
-        bin_oa %in% sel_oa &
-        interv %in% sel_interv &
-        bin_neer %in% sel_neer]
+    subset <- df[
+        bin_lang %in% sel_lang &
+            bin_year %in% sel_year &
+            bin_design %in% sel_design &
+            bin_age %in% sel_age &
+            bin_34part %in% sel_34part &
+            bin_toi %in% sel_toi &
+            bin_doctreat %in% sel_doctreat &
+            bin_loss_fu %in% sel_loss_fu &
+            bin_outcome %in% sel_outcome &
+            follow_up %in% sel_follow_up &
+            bin_fu_longest %in% sel_fu_longest &
+            bin_fu_period %in% sel_fu_period &
+            bin_fu_period_long %in% sel_fu_period_long &
+            bin_oa %in% sel_oa &
+            interv %in% sel_interv &
+            bin_neer %in% sel_neer &
+            bin_imputed %in% sel_imputed
+    ]
 
     if (nrow(subset) == 0) {
         return(NULL)

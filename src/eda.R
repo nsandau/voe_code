@@ -1,4 +1,26 @@
 
+### imputation binary
+
+data_cont %>%
+    group_by(studlab) %>%
+    mutate(bin_impute = case_when(
+        imputed_outcome == "no" ~ 1,
+        str_detect(imputed_outcome, "yes|wrong") & !str_detect(imputed_vars, as.character(outcome)) ~ 1,
+        imputed_outcome == "yes" & str_detect(imputed_vars, as.character(outcome)) ~ 2,
+        imputed_outcome == "wrong" & str_detect(imputed_vars, as.character(outcome)) ~ 3
+    )) %>%
+    select(studlab, outcome, contains("impute")) %>%
+    View()
+
+
+
+data_cont %>% glimpse()
+
+
+
+
+## multi split outcome func
+
 split_multi_outc <- function(split_dfs) {
     loop_list <- list()
     for (df_idx in seq_along(split_dfs)) {

@@ -314,23 +314,28 @@ plan(sequential)
 
 ###### split multiple outcome dfs
 
+## DEN HER TAGER RIGTIG LANG TID - FUTURE_MAP?
 subsets_multi_outc <- subsets %>%
-  keep(~ any(duplicated(.x[["studlab"]]))) %>%
-  map(~ .x %>%
-    group_by(studlab, outcome) %>%
-    group_split())
-
-cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
-
+  keep(~ any(duplicated(.x[["studlab"]])))
 
 plan(multicore, workers = cores)
-tic("Multi outcome split ")
+tic("Create subsets_multi_outc")
+subsets_multi_outc <- subsets_multi_outc %>% map(~ .x %>%
+  group_by(studlab, outcome) %>%
+  group_split())
+toc()
+plan(sequential)
+cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
+
+plan(multicore, workers = as.integer(cores * 0.5)) # den bliver ved med at maxe memory ud
+tic("Multi outcome split dfs ")
 subsets_multi_outc <- subsets_multi_outc %>%
   future_map(~ split_multi_outc(.x))
 toc()
 plan(sequential)
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
 
 tic("Concat subsets")
 # concat lists
