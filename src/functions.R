@@ -281,16 +281,8 @@ do_subset <- function(df,
 
 # split multi outcome -----------------------------------------
 
-split_multi_outc <- function(df) {
-    split_dfs <- df %>%
-        group_by(studlab) %>%
-        filter(n() > 1) %>%
-        group_by(outcome) %>%
-        group_split()
-    unq_df <- df %>%
-        group_by(studlab) %>%
-        filter(n() <= 1)
 
+split_multi_outc <- function(split_dfs) {
     loop_list <- list()
     for (df_idx in seq_along(split_dfs)) {
         loop_df <- split_dfs[[df_idx]]
@@ -307,12 +299,10 @@ split_multi_outc <- function(df) {
                 filter(!studlab %in% loop_df[["studlab"]]))
             sub_idx <- sub_idx + 1
         }
-        loop_df <- bind_rows(loop_df, unq_df)
         loop_list <- c(loop_list, list(loop_df))
     }
     return(loop_list)
 }
-
 
 
 # do metagen --------------------------------------------------------------

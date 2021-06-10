@@ -283,7 +283,7 @@ tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 tic("Writing sel_grid")
-write_feather(sel_grid, here::here("output", paste0("sel_grid_", OUTCOME, ".feather")))
+write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
 toc()
 
 # Subset data -------------------------------------------------------------
@@ -315,15 +315,20 @@ plan(sequential)
 ###### split multiple outcome dfs
 
 subsets_multi_outc <- subsets %>%
-  keep(~ any(duplicated(.x[["studlab"]])))
+  keep(~ any(duplicated(.x[["studlab"]]))) %>%
+  map(~ .x %>%
+    group_by(studlab, outcome) %>%
+    group_split())
+
+cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
+
 
 plan(multicore, workers = cores)
 tic("Multi outcome split ")
-multi_out_splits <- subsets_multi_outc %>%
-  future_map(split_multi_outc)
-plan(sequential)
+subsets_multi_outc <- subsets_multi_outc %>%
+  future_map(~ split_multi_outc(.x))
 toc()
-rm(subsets_multi_outc)
+plan(sequential)
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
@@ -332,11 +337,9 @@ tic("Concat subsets")
 subsets <- c(
   subsets %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
-  multi_out_splits %>% flatten()
+  subsets_multi_outc %>% flatten()
 )
 toc()
-
-rm(multi_out_splits)
 
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 

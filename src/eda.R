@@ -1,4 +1,67 @@
 
+split_multi_outc <- function(split_dfs) {
+    loop_list <- list()
+    for (df_idx in seq_along(split_dfs)) {
+        loop_df <- split_dfs[[df_idx]]
+        sub_idx <- df_idx + 1
+        while (sub_idx <= length(split_dfs)) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
+                filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
+
+        sub_idx <- 1
+        while (sub_idx < df_idx) {
+            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
+                filter(!studlab %in% loop_df[["studlab"]]))
+            sub_idx <- sub_idx + 1
+        }
+        loop_list <- c(loop_list, list(loop_df))
+    }
+    return(loop_list)
+}
+
+
+
+
+subsets_multi_outc <- subsets %>%
+    keep(~ any(duplicated(.x[["studlab"]]))) %>%
+    map(~ .x %>%
+        group_by(studlab, outcome) %>%
+        group_split())
+
+plan("multicore")
+subsets_multi_outc <- subsets_multi_outc %>%
+    future_map(~ split_multi_outc(.x))
+plan("sequential")
+
+
+tic("Concat subsets")
+# concat lists
+subsets <- c(
+    subsets %>%
+        discard(~ any(duplicated(.x[["studlab"]]))),
+    subsets_multi_outc %>% flatten()
+)
+toc()
+
+
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
+
+subset_splits <- subsets_multi_outc %>%
+    subset_splits[[1]]
+
+length(subset_splits)
+
+
+subsets <- c(
+    subsets %>%
+        discard(~ any(duplicated(.x[["studlab"]]))),
+    multi_out_splits %>% flatten()
+)
+
+
 df <- data
 grid <- read_feather("output/sel_grid_qol_full.feather")
 
