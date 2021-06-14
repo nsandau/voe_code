@@ -1,8 +1,8 @@
 
 # MAKE BINARYS ----------------------------------------
 
-make_binary <- function(df) {
-    df %>%
+make_binary <- function(df, outcome) {
+    df_bin <- df %>%
         group_by(studlab) %>%
         mutate(
             bin_lang = if_else(language == "english", 1, 2),
@@ -75,10 +75,17 @@ make_binary <- function(df) {
         ) %>%
         ungroup() %>%
         mutate(
-            bin_outcome = as.numeric(fct_relevel(outcome, "cs")), # making sure CS is no 1
+            bin_outcome = outcome,
             across(starts_with("bin_"), as.integer)
-        ) %>%
-        return()
+        )
+
+    if (outcome == "func") {
+        df_bin <- df_bin %>% mutate(
+            bin_outcome = as.integer(fct_relevel(outcome, "cs")) # making sure CS is no 1
+        )
+    }
+
+    return(df_bin)
 }
 
 #### Function to remove null_combinations in grid ----------------------------------------
@@ -116,12 +123,12 @@ remove_nulls <- function(df, grid, list_of_combos) {
 ### CREATE SELECTION GRID ------------------------------------------------------------
 
 make_sel_grid <- function(df, outcome_type = NULL) {
-    expect_true(outcome_type %in% c("qol", "func"))
-
     if (outcome_type == "qol") {
         outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
-    } else {
+    } else if (outcome_type == "func") {
         outcome_vals <- c(unique(df$bin_outcome), 98:99) # 98: PROMS + CS,99 PROMS
+    } else if (outcome_type == "bin") {
+        outcome_vals <- unique(df$bin_outcome)
     }
 
     # neer
@@ -130,7 +137,6 @@ make_sel_grid <- function(df, outcome_type = NULL) {
 
     # outcome
     interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
-
 
     # create grid
     grid <- expand_grid(
@@ -143,7 +149,7 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         doctreat = unique(df$bin_doctreat),
         loss_fu = unique(df$bin_loss_fu),
         outcome = outcome_vals,
-        follow_up = c(unique(df$follow_up), 98:99), # 98 longest fu from each study, 99 periods of fu
+        follow_up = c(unique(df$follow_up), 98:99), # 98: longest fu from each study, 99: periods of fu
         fu_period = unique(df$bin_fu_period),
         outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
         intervention = interv_vals,

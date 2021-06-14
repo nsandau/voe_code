@@ -3,19 +3,7 @@
 ## TODO:
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
-## I funktion der fjerner null int/out combs også fjerne for plate_tb og arthro??
 ## Fix paths when copying
-## identify highest cardinality features and remove null combos
-
-# DEN LAVER DEN HER ERROR PÅ ERDA
-# Subsets: 4655.883 sec elapsed
-# Mem usage: 10079.65 mb
-# Error in mcfork(detached) :
-#  unable to fork, possible reason: Cannot allocate memory
-# Calls: %>% ... run.MulticoreFuture -> do.call -> <Anonymous> -> mcfork
-# Execution halted
-# det er nok fordi jeg inde i function laver split_dfs. Som så skal deles ud til alle workers?
-# kan enten lave dopar inde i func eller splitte til dfs inden jeg kører future_map?
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
@@ -29,7 +17,7 @@ if (length(args) == 0) {
   stop("Need to supply outcome", call. = FALSE)
 }
 # define outcome
-testthat::expect_true(args[1] %in% c("qol", "func"))
+testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
 OUTCOME <- args[1]
 
 # if second argument given: conduct dev-run
@@ -64,8 +52,11 @@ pacman::p_load(
   tidyverse,
   arrow,
   lobstr,
-  meta
+  meta,
+  install = FALSE,
+  update = FALSE
 )
+
 
 # PRINT INFO
 cores <- future::availableCores()
@@ -121,7 +112,7 @@ bin_outcomes <- c(
   "instability",
   "failure",
   "metalwork",
-  "nerve_inj",
+  "nerveinj",
   "infection",
   "avn",
   "malunion",
@@ -135,12 +126,11 @@ OUTCOME_VARS <- if (OUTCOME == "qol") {
   qol_outcomes
 } else if (OUTCOME == "func") {
   func_outcomes
+} else if (OUTCOME == "bin") {
+  bin_outcomes
 }
 
-nrsi_studies <- data_extract %>%
-  filter(str_detect(design, "nrsi")) %>%
-  pull(studlab) %>%
-  unique()
+OUTCOME_DESELECT <- setdiff(c(func_outcomes, qol_outcomes, bin_outcomes), OUTCOME_VARS)
 
 # REMOVE COLS WITH ZERO VARIANCE--------------------------------------
 char_col <- data_extract %>%
@@ -159,7 +149,7 @@ zv_cols <- data_extract %>%
 
 data_extract <- data_extract %>% select(-all_of(zv_cols))
 
-# CALCULATE TOTAL AGE AND LOSS TO FU --------------------------------
+# CALCULATE TOTAL N AND NEER --------------------------------
 data_extract <- data_extract %>%
   left_join(data_extract %>%
     group_by(studlab) %>%
@@ -179,10 +169,10 @@ expect_true(all(data_extract$total_n - replace_na(data_extract$total_loss_to_fu,
 # RESHAPE DF --------------------------------------------------------------
 data_cont <- data_extract %>%
   select(
-    -starts_with(all_of(bin_outcomes))
+    -starts_with(all_of(OUTCOME_DESELECT))
   ) %>%
   pivot_longer(
-    cols = starts_with(all_of(cont_outcomes)),
+    cols = starts_with(all_of(OUTCOME_VARS)),
     names_to = c("outcome", "follow_up", "type"),
     names_sep = "_",
     values_drop_na = T
@@ -219,40 +209,44 @@ testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
 ####
 
-# REVERSE DASH  ---------------------------------------------------
+# REVERSE DASH NUMERIC OUTCOMES--------------------------------------
 
-data_cont <- data_cont %>%
-  mutate(
-    int_mean = if_else(outcome == "dash", 100 - int_mean, int_mean),
-    con_mean = if_else(outcome == "dash", 100 - con_mean, con_mean),
-    int_mean = if_else(outcome == "qdash", 100 - int_mean, int_mean),
-    con_mean = if_else(outcome == "qdash", 100 - con_mean, con_mean)
-  )
+if (OUTCOME == "func") {
+  data_cont <- data_cont %>%
+    mutate(
+      int_mean = if_else(outcome == "dash", 100 - int_mean, int_mean),
+      con_mean = if_else(outcome == "dash", 100 - con_mean, con_mean),
+      int_mean = if_else(outcome == "qdash", 100 - int_mean, int_mean),
+      con_mean = if_else(outcome == "qdash", 100 - con_mean, con_mean)
+    )
+}
 
-# CALCULATE SMD ------------------------------------------------
+# CALCULATE SMD for NUMERIC OUTCOMES-----------------------------
 
-data_cont <- data_cont %>%
-  group_by(studlab, interv) %>%
-  nest() %>%
-  mutate(
-    esc_output = map(data, ~
-    esc_mean_sd(
-      grp1m = .x$int_mean,
-      grp1sd = .x$int_sd,
-      grp1n = .x$int_n,
-      grp2m = .x$con_mean,
-      grp2sd = .x$con_sd,
-      grp2n = .x$con_n,
-      es.type = "g"
-    ))
-  ) %>%
-  mutate(
-    smd = map(esc_output, "es"),
-    se = map(esc_output, "se")
-  ) %>%
-  select(-esc_output) %>%
-  unnest(c(data, smd, se)) %>%
-  ungroup()
+if (OUTCOME %in% c("qol", "func")) {
+  data_cont <- data_cont %>%
+    group_by(studlab, interv) %>%
+    nest() %>%
+    mutate(
+      esc_output = map(data, ~
+      esc_mean_sd(
+        grp1m = .x$int_mean,
+        grp1sd = .x$int_sd,
+        grp1n = .x$int_n,
+        grp2m = .x$con_mean,
+        grp2sd = .x$con_sd,
+        grp2n = .x$con_n,
+        es.type = "g"
+      ))
+    ) %>%
+    mutate(
+      smd = map(esc_output, "es"),
+      se = map(esc_output, "se")
+    ) %>%
+    select(-esc_output) %>%
+    unnest(c(data, smd, se)) %>%
+    ungroup()
+}
 
 ## TEST: No study has FU less than 6 or 12
 ttfu_test <- data_cont %>%
@@ -268,10 +262,16 @@ expect_true(all(ttfu_test$bin_ttfu == 1))
 
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 
+if (OUTCOME %in% c("qol", "func")) {
+  EFFECT_SIZE_COLS <- c("smd", "se")
+} else if (OUTCOME == "bin") {
+  EFFECT_SIZE_COLS <- c("int_e", "int_n", "con_e", "con_n")
+}
+
 data <- data_cont %>%
   filter(outcome %in% OUTCOME_VARS) %>%
-  make_binary() %>%
-  select(studlab, interv, outcome, follow_up, smd, se, starts_with("bin_")) %>%
+  make_binary(outcome = OUTCOME) %>%
+  select(studlab, interv, outcome, follow_up, all_of(EFFECT_SIZE_COLS), starts_with("bin_")) %>%
   as.data.table()
 
 # Create selection grids  ---------------------------------------------------
@@ -329,7 +329,7 @@ cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
-plan(multicore, workers = as.integer(cores * 0.5)) # den bliver ved med at maxe memory ud
+plan(multicore, workers = 10) # den bliver ved med at maxe memory ud på erda, derfor 10
 tic("Multi outcome split dfs ")
 subsets_multi_outc <- subsets_multi_outc %>%
   future_map(~ split_multi_outc(.x))
@@ -364,14 +364,14 @@ results_df <- results %>% extract_metagen()
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_feather(results_df, here::here("output", paste0("results_df_", OUTCOME, ".feather")))
-write_feather(pvals, here::here("output", paste0("pvals_", OUTCOME, ".feather")))
+write_feather(results_df, here::here("output", str_c("results_df_", OUTCOME, ".feather")))
+write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, ".feather")))
 toc()
 
 # COPY FILES TO erda storage
 from_path <- here::here("output")
 to_path <- file.path(ERDA_PATH, "VOE_OUTPUT", OUTCOME, DATE)
 dir.create(to_path, recursive = T)
-file_paths <- list.files(from_path, ".rds$|.feather$") %>%
+file_names <- list.files(from_path, ".rds$|.feather$") %>%
   str_subset(OUTCOME)
-file.copy(file_paths, to_path)
+file.copy(file.path(from_path, file_names), to_path)
