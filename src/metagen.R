@@ -33,7 +33,11 @@ MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 LIB_PATHS <- .libPaths(file.path(MODI_PATH, "R_lib"))
 
-install.packages("pacman", repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
+if (!require(pacman)) {
+  install.packages(pacman, repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
+  library(pacman)
+}
+
 
 ##### LIBRARIES
 pacman::p_load(

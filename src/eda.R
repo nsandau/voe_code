@@ -10,6 +10,13 @@ pwr.t.test()
 pwr.t.test(d = 1.5, power = 0.8, type = "two.sample", alternative = "two.sided")
 
 
+?require
+
+require(pacman)
+
+if (!require(pacman)) {
+      install.packages(pacman, dependencies = TRUE)
+      library(pacman)
 
 
 pacman::p_load(esc)
