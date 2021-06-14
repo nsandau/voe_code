@@ -1,4 +1,36 @@
 
+
+
+install.packages("pacman")
+
+test <- "test"
+
+pwr.t.test()
+
+pwr.t.test(d = 1.5, power = 0.8, type = "two.sample", alternative = "two.sided")
+
+
+
+
+pacman::p_load(esc)
+### METABIN
+
+test_df <- data_extract %>% select(-(starts_with(cont_outcomes)))
+
+test_df %>%
+    filter(studlab == "fjalestad 2014") %>%
+    glimpse()
+
+test_df %>%
+    select(starts_with(OUTCOME_VARS)) %>%
+    names() %>%
+    tibble(cols = .) %>%
+    mutate(
+        n_underscores = str_count(cols, "_")
+    ) %>%
+    filter(n_underscores != 2)
+
+
 ### imputation binary
 
 data_cont %>%
@@ -43,7 +75,7 @@ split_multi_outc <- function(split_dfs) {
     return(loop_list)
 }
 
-
+pacman::p_load(dtplyr)
 
 
 subsets_multi_outc <- subsets %>%
