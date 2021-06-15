@@ -319,7 +319,13 @@ cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
-plan(multicore, workers = 10) # den bliver ved med at maxe memory ud på erda, derfor 10
+if (OUTCOME == "func") {
+  cores_split <- 5
+} else {
+  cores_split <- cores
+}
+
+plan(multicore, workers = cores_split) # den bliver ved med at maxe memory ud på erda, derfor 10
 tic("Multi outcome split dfs ")
 subsets_multi_outc <- subsets_multi_outc %>%
   future_map(~ split_multi_outc(.x))
