@@ -64,6 +64,11 @@ make_binary <- function(df, outcome) {
                 between(follow_up, 0, 11.999) ~ 1,
                 between(follow_up, 12, 23.999) ~ 2,
                 follow_up >= 24 ~ 3
+            ),
+            bin_ttfu = case_when(
+                max(follow_up) >= 12 ~ 1,
+                between(max(follow_up), 6, 11.999) ~ 2,
+                TRUE ~ 3
             )
         ) %>%
         group_by(studlab, outcome, bin_fu_period) %>%
@@ -154,7 +159,8 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
         intervention = interv_vals,
         neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
-        imputed = unique(df$bin_imputed)
+        imputed = unique(df$bin_imputed),
+        ttfu = unique(df$bin_ttfu)
     ) %>%
         mutate(
             across(where(is.numeric), as.integer),
@@ -196,7 +202,8 @@ do_subset <- function(df,
                       outcome_analysis,
                       intervention,
                       neer,
-                      imputed) {
+                      imputed,
+                      ttfu) {
     # Simple selection vars
     sel_lang <- 1:language
     sel_year <- 1:year
@@ -207,6 +214,7 @@ do_subset <- function(df,
     sel_doctreat <- 1:doctreat
     sel_loss_fu <- 1:loss_fu
     sel_imputed <- 1:imputed
+    sel_ttfu <- 1:ttfu
 
     # outcomes
     if (!outcome %in% c(98, 99)) { # select specific outcomes
@@ -286,7 +294,8 @@ do_subset <- function(df,
             bin_oa %in% sel_oa &
             interv %in% sel_interv &
             bin_neer %in% sel_neer &
-            bin_imputed %in% sel_imputed
+            bin_imputed %in% sel_imputed &
+            bin_ttfu %in% sel_ttfu
     ]
 
     if (nrow(subset) == 0) {
@@ -325,21 +334,40 @@ split_multi_outc <- function(split_dfs) {
 
 # do metagen --------------------------------------------------------------
 
-do_metagen <- function(data) {
-    metagen(
-        TE = smd,
-        seTE = se,
-        hakn = FALSE,
-        method.tau = "DL",
-        studlab = studlab,
-        data = data
-    )
+do_meta <- function(data, outcome) {
+    if (outcome %in% c("qol", "func")) {
+        metagen(
+            TE = smd,
+            seTE = se,
+            hakn = FALSE,
+            method.tau = "DL",
+            studlab = studlab,
+            data = data
+        )
+    }
+    else if (outcome == "bin") {
+        metabin(
+            event.e = int_e,
+            n.e = int_n,
+            event.c = con_e,
+            n.c = con_n,
+            studlab = studlab,
+            data = data,
+            sm = "RR",
+            method = "MH",
+            MH.exact = FALSE,
+            comb.fixed = FALSE,
+            comb.random = TRUE,
+            method.tau = "PM",
+            hakn = TRUE
+        )
+    }
 }
 
 # extract results metagen -------------------------------------------------
 
-extract_metagen <- function(data) {
-    data %>%
+extract_meta <- function(data, outcome) {
+    res <- data %>%
         map_dbl("TE.fixed") %>%
         enframe(name = "iteration", "te.fixed") %>%
         mutate(
@@ -358,6 +386,15 @@ extract_metagen <- function(data) {
             k = map_dbl(data, "k"),
             studlab = map_chr(data, ~ str_flatten(.x$studlab, collapse = " "))
         )
+    if (outcome == "bin") {
+        res <- res %>%
+            filter(k != 0) %>%
+            mutate(
+                across(starts_with(c("te.", "sete.", "lower.", "upper.")), exp)
+            )
+    }
+
+    return(res)
 }
 
 # gather pvals ------------------------------------------------------------
@@ -379,8 +416,7 @@ gather_pvals <- function(data) {
                     k = k,
                     method = "random"
                 )
-        ) %>%
-        distinct()
+        )
 }
 
 

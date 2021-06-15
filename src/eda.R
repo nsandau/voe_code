@@ -1,4 +1,55 @@
 
+ttfu_test <- data_cont %>%
+  group_by(studlab, outcome) %>%
+  mutate(bin_ttfu = case_when(
+    max(follow_up) >= 12 ~ 1,
+    between(max(follow_up), 6, 11.999) ~ 2,
+    TRUE ~ 3
+  ))
+
+
+
+ttfu_test %>% select(follow_up, bin_ttfu) %>% filter(bin_ttfu > 1)
+
+
+
+
+data <- results
+
+outcome <- OUTCOME
+
+  res <- data %>%
+        map_dbl("TE.fixed") %>%
+        enframe(name = "iteration", "te.fixed") %>%
+        mutate(
+            sete.fixed = map_dbl(data, "seTE.fixed"),
+            lower.fixed = map_dbl(data, "lower.fixed"),
+            upper.fixed = map_dbl(data, "upper.fixed"),
+            pval.fixed = map_dbl(data, "pval.fixed"),
+            te.random = map_dbl(data, "TE.random"),
+            sete.random = map_dbl(data, "seTE.random"),
+            lower.random = map_dbl(data, "lower.random"),
+            upper.random = map_dbl(data, "upper.random"),
+            pval.random = map_dbl(data, "pval.random"),
+            i2 = map_dbl(data, "I2"),
+            q = map_dbl(data, "Q"),
+            pval.q = map_dbl(data, "pval.Q"),
+            k = map_dbl(data, "k"),
+            studlab = map_chr(data, ~ str_flatten(.x$studlab, collapse = " "))
+        ) 
+
+    if (outcome == "bin") {
+        res <- res %>%
+        mutate(
+            across(starts_with(c("te.", "sete.", "lower.", "upper.")), exp)
+
+        )
+    }
+
+res %>% filter(k > 1)
+
+
+
 
 
 install.packages("pacman")

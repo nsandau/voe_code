@@ -31,12 +31,6 @@ BASE_PATH <- "/home/kmd592_ku_dk"
 ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
 MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
-LIB_PATHS <- .libPaths(file.path(MODI_PATH, "R_lib"))
-
-if (!require(pacman)) {
-  install.packages(pacman, repos = "https://cloud.r-project.org/", lib = LIB_PATHS[1])
-  library(pacman)
-}
 
 ##### LIBRARIES
 pacman::p_load(
@@ -251,18 +245,6 @@ if (OUTCOME %in% c("qol", "func")) {
     ungroup()
 }
 
-## TEST: No study has FU less than 6 or 12
-ttfu_test <- data_cont %>%
-  group_by(studlab, outcome) %>%
-  mutate(bin_ttfu = case_when(
-    max(follow_up) >= 12 ~ 1,
-    between(max(follow_up), 6, 11.999) ~ 2,
-    TRUE ~ 3
-  )) %>%
-  select(bin_ttfu)
-
-expect_true(all(ttfu_test$bin_ttfu == 1))
-
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
 
 if (OUTCOME %in% c("qol", "func")) {
@@ -278,6 +260,10 @@ data <- data_cont %>%
   as.data.table()
 
 # Create selection grids  ---------------------------------------------------
+
+if (DEV_RUN == TRUE) {
+  data <- data %>% slice_sample(prop = 0.1)
+}
 
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
@@ -307,8 +293,8 @@ subsets <- sel_grid %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
 toc()
+cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
 plan(sequential)
 
 # tic("Writing QOL subsets")
@@ -317,7 +303,6 @@ plan(sequential)
 
 ###### split multiple outcome dfs
 
-## DEN HER TAGER RIGTIG LANG TID - FUTURE_MAP?
 subsets_multi_outc <- subsets %>%
   keep(~ any(duplicated(.x[["studlab"]])))
 
@@ -348,7 +333,7 @@ subsets <- c(
   subsets_multi_outc %>% flatten()
 )
 toc()
-
+cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets_final")
@@ -356,14 +341,18 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 # toc()
 
 # Conduct metagen ---------------------------------------------------------
-tic("Metagen")
+tic("Meta-analysis")
 plan(multicore, workers = cores)
 results <- subsets %>%
-  future_map(~ do_metagen(.x))
+  future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
 toc()
 
-results_df <- results %>% extract_metagen()
+
+## EXTRACT RESULTS ---------------------------------------------------
+results_df <- results %>% extract_meta(outcome = OUTCOME)
+cat("Results_df rows", nrow(results_df), "\n")
+
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
