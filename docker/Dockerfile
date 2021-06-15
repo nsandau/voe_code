@@ -11,6 +11,7 @@ RUN conda update --all -y && \
     r-arrow \
     r-lobstr \
     r-meta \
+    r-here \
     r-conflicted && \ 
     conda clean -ya 
 

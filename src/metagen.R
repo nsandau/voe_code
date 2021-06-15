@@ -58,12 +58,13 @@ pacman::p_load(
 # PRINT INFO
 cores <- future::availableCores()
 ram <- benchmarkme::get_ram()
+cat("Outcome is:", OUTCOME, "\n")
 cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 cat("Current dir:", getwd(), "\n")
 
-conflict_prefer("filter", "dplyr")
-conflict_prefer("between", "dplyr")
-conflict_prefer("year", "lubridate")
+conflict_prefer("filter", "dplyr", quiet = TRUE)
+conflict_prefer("between", "dplyr", quiet = TRUE)
+conflict_prefer("year", "lubridate", quiet = TRUE)
 
 # import functions
 source(here("src", "functions.R"))
@@ -157,7 +158,7 @@ data_extract <- data_extract %>%
       total_neer_2_part = sum(neer_2_part),
       total_neer_3_part = sum(neer_3_part),
       total_neer_4_part = sum(neer_4_part)
-    )) %>%
+    ), by = "studlab") %>%
   select(-c(n, lost_to_fu), -starts_with("neer"))
 
 # TEST: NO STUDY HAS < 15 samples
@@ -193,7 +194,8 @@ data_cont <- data_extract %>%
       ) %>%
       filter(intervention_type != "nonop") %>%
       rename(interv = intervention_type)
-    )
+    ),
+    by = "studlab"
   ) %>%
   mutate(
     follow_up = as.integer(follow_up),
