@@ -1,3 +1,72 @@
+data %>% dtplyr::lazy_dt() %>% slice_sample(prop = 0.3) %>% as.data.table()
+
+
+data
+
+
+outcome_type <- OUTCOME
+df <- 
+
+ if (outcome_type == "qol") {
+        outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
+    } else if (outcome_type == "func") {
+        outcome_vals <- c(unique(df$bin_outcome), 98:99) # 98: PROMS + CS,99 PROMS
+    } else if (outcome_type == "bin") {
+        outcome_vals <- unique(df$bin_outcome)
+    }
+
+    # neer
+    neer_vals <- unique(df$bin_neer)
+    neer_vals <- neer_vals[neer_vals %in% 2:4]
+
+    # outcome
+    interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
+
+    # create grid
+    grid <- expand_grid(
+        language = unique(df$bin_lang),
+        year = unique(df$bin_year),
+        design = unique(df$bin_design),
+        age = unique(df$bin_age),
+        neer_34part = unique(df$bin_34part),
+        toi = unique(df$bin_toi),
+        doctreat = unique(df$bin_doctreat),
+        loss_fu = unique(df$bin_loss_fu),
+        outcome = outcome_vals,
+        follow_up = c(unique(df$follow_up), 98:99), # 98: longest fu from each study, 99: periods of fu
+        fu_period = unique(df$bin_fu_period),
+        outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
+        intervention = interv_vals,
+        neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
+        imputed = unique(df$bin_imputed),
+        ttfu = unique(df$bin_ttfu)
+    ) %>%
+        mutate(
+            across(where(is.numeric), as.integer),
+            across(where(is.character), as_factor)
+        ) %>%
+        as.data.table()
+
+    nrow_before <- nrow(grid)
+    cat("Rows before removal of nulls:", nrow_before, "\n")
+
+    # remove null combinations
+    combs <- list(
+        c("follow_up", "outcome"),
+        c("intervention", "outcome"),
+        c("intervention", "follow_up")
+    )
+    grid <- remove_nulls(df, grid, combs)
+    nrow_after <- nrow(grid)
+    cat("Rows after removal of nulls:", nrow_after, "\n")
+    nrow_diff <- nrow_before - nrow_after
+    cat("Rows removed:", nrow_diff, round(nrow_diff / nrow_before) * 100, "%", "\n")
+    
+
+
+
+
+
 
 
 

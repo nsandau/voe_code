@@ -268,7 +268,10 @@ data <- data_cont %>%
 # Create selection grids  ---------------------------------------------------
 
 if (DEV_RUN == TRUE) {
-  data <- data %>% slice_sample(prop = 0.3)
+  data <- data %>%
+    dtplyr::lazy_dt() %>%
+    slice_sample(prop = 0.3) %>%
+    as.data.table()
 }
 
 tictoc::tic("Selection grid")
