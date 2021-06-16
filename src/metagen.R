@@ -33,27 +33,28 @@ MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 
 ##### LIBRARIES
-pacman::p_load(
-  esc,
-  conflicted,
-  janitor,
-  furrr,
-  testthat,
-  readxl,
-  here,
-  lubridate,
-  purrr,
-  benchmarkme,
-  tictoc,
-  data.table,
-  tidyverse,
-  arrow,
-  lobstr,
-  meta,
-  install = FALSE,
-  update = FALSE
+
+pkgs <- c(
+  "esc",
+  "conflicted",
+  "janitor",
+  "furrr",
+  "testthat",
+  "readxl",
+  "here",
+  "lubridate",
+  "purrr",
+  "benchmarkme",
+  "tictoc",
+  "data.table",
+  "tidyverse",
+  "arrow",
+  "lobstr",
+  "meta",
+  "dtplyr"
 )
 
+purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
 
 # PRINT INFO
 cores <- future::availableCores()
@@ -264,7 +265,7 @@ data <- data_cont %>%
 # Create selection grids  ---------------------------------------------------
 
 if (DEV_RUN == TRUE) {
-  data <- data %>% slice_sample(prop = 0.1)
+  data <- data %>% slice_sample(prop = 0.3)
 }
 
 tictoc::tic("Selection grid")
@@ -280,7 +281,7 @@ toc()
 # Subset data -------------------------------------------------------------
 
 if (DEV_RUN == TRUE) {
-  sel_grid <- sel_grid %>% slice_sample(n = 20000)
+  sel_grid <- sel_grid %>% slice_sample(n = 30000)
 }
 
 plan(multicore, workers = cores)
@@ -300,7 +301,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 plan(sequential)
 
 # tic("Writing QOL subsets")
-# write_rds(subsets, here::here("output", paste0("subsets_", OUTCOME, ".rds")))
+# write_rds(subsets, here::here("output", str_c("subsets_", OUTCOME, ".rds")))
 # toc()
 
 ###### split multiple outcome dfs
