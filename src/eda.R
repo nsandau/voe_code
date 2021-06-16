@@ -1,7 +1,13 @@
-data %>% dtplyr::lazy_dt() %>% slice_sample(prop = 0.3) %>% as.data.table()
+df <- data
 
+df <- dtplyr::lazy_dt(df) %>% group_by(studlab)
 
-data
+    multi_df <- df %>%
+        filter(n() > 1) %>%
+        as.data.table()
+
+multi_df
+
 
 
 outcome_type <- OUTCOME
