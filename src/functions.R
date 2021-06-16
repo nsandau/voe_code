@@ -352,7 +352,9 @@ do_meta <- function(data, outcome) {
             hakn = FALSE,
             method.tau = "DL",
             studlab = studlab,
-            data = data
+            data = data,
+            comb.random = TRUE,
+            comb.fixed = TRUE
         )
     }
     else if (outcome == "bin") {
@@ -366,7 +368,7 @@ do_meta <- function(data, outcome) {
             sm = "RR",
             method = "MH",
             MH.exact = FALSE,
-            comb.fixed = FALSE,
+            comb.fixed = TRUE,
             comb.random = TRUE,
             method.tau = "PM",
             hakn = TRUE

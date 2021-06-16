@@ -51,7 +51,7 @@ pkgs <- c(
   "lobstr",
   "meta",
   "tidyverse"
-)
+) ## KAN NOK SPARE LIDT VED IKKE AT LOADE TIDYVERSE MEN KUN SPECIFIKKE PAKKER
 
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
 # import functions
@@ -318,7 +318,15 @@ subsets_multi_outc <- subsets %>%
 cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-plan(multicore, workers = cores)
+
+if (OUTCOME == "func") {
+  split_cores <- 2
+} else {
+  split_cores <- cores
+}
+
+
+plan(multicore, workers = split_cores)
 tic("Multi outcome split dfs ")
 subsets_multi_outc <- subsets_multi_outc %>%
   future_map(~ split_multi_outc(.x))
