@@ -1,25 +1,26 @@
 
-subsets <- read_rds("output/subsets_func.rds")
 
 
 
-subsets %>% keep(~ any(duplicated(.x[["studlab"]])))
+subsets<- read_rds("output/subsets_qol.rds")
+
+multi_test <- subsets_multi_outc %>% keep(~nrow(.x) > 6) %>% map(as.data.table)
 
 
+multi_test
 
-multi_test <- subsets_multi_outc %>% keep(~nrow(.x) > 6)
-
-df <- data %>% filter (follow_up == 12) %>% as.data.table()
 
 
 ### FUNC START. TAGER EN DF AF GANGEN
+multi_split_fun <- function(df) {
+
 df <- lazy_dt(df) %>% group_by(studlab)
 
 multi_df <- df  %>% filter(n() > 1) %>% as.data.table()
 
 unq_df <- df %>% filter(n() <= 1) %>% as.data.table()
 
-split_list <- dt %>% 
+split_list <- multi_df %>% 
 split(by = "studlab", drop = T) %>%
  map(~split(.x, by = "outcome", drop = T))
 
@@ -35,11 +36,14 @@ for (row in 1:nrow(grid)) {
         df_idx <- grid[[row,col]]
         df_list[[col]] <- split_list[[col]][[df_idx]]
     }
-    df_list[[col+1]] <- unq_df
+    df_list[[col+1]] <- unq_df # kan evt indsætte tjek for om unq_df har 0 rows
     list_out[[row]] <- df_list
 }
+return (list_out)
+}
 
-list_out %>% map(~rbindlist(.x))
+
+test_out %>% flatten() %>%  map(~rbindlist(.x))
 
 
 row

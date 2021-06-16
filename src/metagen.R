@@ -55,6 +55,9 @@ pkgs <- c(
 )
 
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
+# import functions
+source(here("src", "functions.R"))
+
 
 # PRINT INFO
 cores <- future::availableCores()
@@ -66,9 +69,9 @@ cat("Current dir:", getwd(), "\n")
 conflict_prefer("filter", "dplyr", quiet = TRUE)
 conflict_prefer("between", "dplyr", quiet = TRUE)
 conflict_prefer("year", "lubridate", quiet = TRUE)
+conflict_prefer("filter", "dplyr", quiet = T)
 
-# import functions
-source(here("src", "functions.R"))
+
 
 # IMPORT ------------------------------------------------------------------
 data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
@@ -309,24 +312,9 @@ plan(sequential)
 subsets_multi_outc <- subsets %>%
   keep(~ any(duplicated(.x[["studlab"]])))
 
-plan(multicore, workers = cores)
-tic("Create subsets_multi_outc")
-subsets_multi_outc <- subsets_multi_outc %>% map(~ .x %>%
-  group_by(studlab, outcome) %>%
-  group_split())
-toc()
-plan(sequential)
-cat("Length of multi_outc list:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-
-if (OUTCOME == "func") {
-  cores_split <- 5
-} else {
-  cores_split <- cores
-}
-
-plan(multicore, workers = cores_split) # den bliver ved med at maxe memory ud på erda, derfor 10
+plan(multicore, workers = cores)
 tic("Multi outcome split dfs ")
 subsets_multi_outc <- subsets_multi_outc %>%
   future_map(~ split_multi_outc(.x))
@@ -334,12 +322,16 @@ toc()
 plan(sequential)
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
+subsets_multi_outc <- subsets_multi_outc %>%
+  flatten() %>%
+  map(~ rbindlist(.x))
+
 tic("Concat subsets")
 # concat lists
 subsets <- c(
   subsets %>%
     discard(~ any(duplicated(.x[["studlab"]]))),
-  subsets_multi_outc %>% flatten()
+  subsets_multi_outc
 )
 toc()
 cat("Length of final subsets:", length(subsets), "\n")

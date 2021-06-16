@@ -302,36 +302,43 @@ do_subset <- function(df,
         return(NULL)
     }
     else {
-        return(as_tibble(subset))
+        return(subset)
     }
 }
 
 # split multi outcome -----------------------------------------
 
 
-split_multi_outc <- function(split_dfs) {
-    loop_list <- list()
-    for (df_idx in seq_along(split_dfs)) {
-        loop_df <- split_dfs[[df_idx]]
-        sub_idx <- df_idx + 1
-        while (sub_idx <= length(split_dfs)) {
-            loop_df <- bind_rows(
-                loop_df,
-                split_dfs[[sub_idx]] %>%
-                    filter(!studlab %in% loop_df[["studlab"]])
-            )
-            sub_idx <- sub_idx + 1
-        }
+split_multi_outc <- function(df) {
+    df <- lazy_dt(df) %>% group_by(studlab)
 
-        sub_idx <- 1
-        while (sub_idx < df_idx) {
-            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
-                filter(!studlab %in% loop_df[["studlab"]]))
-            sub_idx <- sub_idx + 1
+    multi_df <- df %>%
+        filter(n() > 1) %>%
+        as.data.table()
+
+    unq_df <- df %>%
+        filter(n() <= 1) %>%
+        as.data.table()
+
+    split_list <- multi_df %>%
+        split(by = "studlab", drop = T) %>%
+        map(~ split(.x, by = "outcome", drop = T))
+
+    idx <- split_list %>% map(~ seq_along(.x))
+
+    grid <- exec("expand_grid", !!!idx, .name_repair = "minimal")
+
+    list_out <- list()
+    for (row in 1:nrow(grid)) {
+        df_list <- list()
+        for (col in 1:ncol(grid)) {
+            df_idx <- grid[[row, col]]
+            df_list[[col]] <- split_list[[col]][[df_idx]]
         }
-        loop_list <- c(loop_list, list(loop_df))
+        df_list[[col + 1]] <- unq_df # evt adde tjek for om unq_df har 0 rows
+        list_out[[row]] <- df_list
     }
-    return(loop_list)
+    return(list_out)
 }
 
 
