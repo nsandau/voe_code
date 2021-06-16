@@ -310,7 +310,7 @@ do_subset <- function(df,
 
 
 split_multi_outc <- function(df) {
-    df <- lazy_dt(df) %>% group_by(studlab)
+    df <- dtplyr::lazy_dt(df) %>% group_by(studlab)
 
     multi_df <- df %>%
         filter(n() > 1) %>%

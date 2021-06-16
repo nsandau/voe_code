@@ -47,17 +47,15 @@ pkgs <- c(
   "benchmarkme",
   "tictoc",
   "data.table",
-  "tidyverse",
   "arrow",
   "lobstr",
   "meta",
-  "dtplyr"
+  "tidyverse"
 )
 
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
 # import functions
 source(here("src", "functions.R"))
-
 
 # PRINT INFO
 cores <- future::availableCores()
@@ -273,6 +271,7 @@ if (DEV_RUN == TRUE) {
     slice_sample(prop = 0.3) %>%
     as.data.table()
 }
+
 
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
