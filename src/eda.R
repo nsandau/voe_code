@@ -1,4 +1,82 @@
 
+subsets <- read_rds("output/subsets_func.rds")
+
+
+
+subsets %>% keep(~ any(duplicated(.x[["studlab"]])))
+
+
+
+multi_test <- subsets_multi_outc %>% keep(~nrow(.x) > 6)
+
+df <- data %>% filter (follow_up == 12) %>% as.data.table()
+
+
+### FUNC START. TAGER EN DF AF GANGEN
+df <- lazy_dt(df) %>% group_by(studlab)
+
+multi_df <- df  %>% filter(n() > 1) %>% as.data.table()
+
+unq_df <- df %>% filter(n() <= 1) %>% as.data.table()
+
+split_list <- dt %>% 
+split(by = "studlab", drop = T) %>%
+ map(~split(.x, by = "outcome", drop = T))
+
+idx <- split_list %>% map(~seq_along(.x))
+
+grid <- exec("expand_grid", !!!idx, .name_repair = "minimal")
+
+list_out <- list()
+for (row in 1:nrow(grid)) {
+            df_list <- list()
+    for (col in 1:ncol(grid)) {
+
+        df_idx <- grid[[row,col]]
+        df_list[[col]] <- split_list[[col]][[df_idx]]
+    }
+    df_list[[col+1]] <- unq_df
+    list_out[[row]] <- df_list
+}
+
+list_out %>% map(~rbindlist(.x))
+
+
+row
+col
+
+list_out[row][[col]]
+
+list_out
+
+ncol(grid)
+
+1:ncol(grid)
+1:nrow(grid)
+
+list_out[row][[col]] <- "test1"
+
+
+
+grid %>% pmap(.f = test_fun)
+
+grid
+
+
+
+
+expand_grid(studlab_idx = idx$name, outcome_idx = idx$value)
+
+outcomes %>% map(~ multi_df %>% filter(outcome != .x))
+
+outcomes <- multi_df %>% distinct(outcome) %>% pull(outcome) 
+studlabs <- multi_df %>% distinct(studlab) %>% pull(studlab)
+
+
+expand_grid(outcomes, studlabs)
+
+
+
 ttfu_test <- data_cont %>%
   group_by(studlab, outcome) %>%
   mutate(bin_ttfu = case_when(
@@ -12,6 +90,8 @@ ttfu_test <- data_cont %>%
 ttfu_test %>% select(follow_up, bin_ttfu) %>% filter(bin_ttfu > 1)
 
 
+
+subsets_multi_outc
 
 
 data <- results

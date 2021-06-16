@@ -315,8 +315,11 @@ split_multi_outc <- function(split_dfs) {
         loop_df <- split_dfs[[df_idx]]
         sub_idx <- df_idx + 1
         while (sub_idx <= length(split_dfs)) {
-            loop_df <- bind_rows(loop_df, split_dfs[[sub_idx]] %>%
-                filter(!studlab %in% loop_df[["studlab"]]))
+            loop_df <- bind_rows(
+                loop_df,
+                split_dfs[[sub_idx]] %>%
+                    filter(!studlab %in% loop_df[["studlab"]])
+            )
             sub_idx <- sub_idx + 1
         }
 
