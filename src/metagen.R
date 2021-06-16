@@ -315,7 +315,7 @@ plan(sequential)
 
 subsets_multi_outc <- subsets %>%
   keep(~ any(duplicated(.x[["studlab"]])))
-
+cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 plan(multicore, workers = cores)
@@ -329,6 +329,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 subsets_multi_outc <- subsets_multi_outc %>%
   flatten() %>%
   map(~ rbindlist(.x))
+cat("No of dfs after split multi outcomes:", length(subsets_multi_outc), "\n")
 
 tic("Concat subsets")
 # concat lists
