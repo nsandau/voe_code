@@ -286,11 +286,13 @@ toc()
 # Subset data -------------------------------------------------------------
 
 if (DEV_RUN == TRUE) {
-  sel_grid <- sel_grid %>% slice_sample(n = 30000)
+  sel_grid <- sel_grid %>%
+    dtplyr::lazy_dt() %>%
+    slice_sample(n = 30000) %>%
+    as.data.table()
 }
 
 plan(multicore, workers = cores)
-
 tic("Subsets")
 subsets <- sel_grid %>%
   future_pmap(
