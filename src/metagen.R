@@ -50,10 +50,11 @@ pkgs <- c(
   "arrow",
   "lobstr",
   "meta",
-  "tidyverse"
-) ## KAN NOK SPARE LIDT VED IKKE AT LOADE TIDYVERSE MEN KUN SPECIFIKKE PAKKER
-
+  "tidyverse",
+  "tidytable"
+)
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
+
 # import functions
 source(here("src", "functions.R"))
 
@@ -267,8 +268,7 @@ data <- data_cont %>%
 
 if (DEV_RUN == TRUE) {
   data <- data %>%
-    dtplyr::lazy_dt() %>%
-    slice_sample(prop = 0.3) %>%
+    slice_sample.(prop = 0.3) %>%
     as.data.table()
 }
 
@@ -287,8 +287,7 @@ toc()
 
 if (DEV_RUN == TRUE) {
   sel_grid <- sel_grid %>%
-    dtplyr::lazy_dt() %>%
-    slice_sample(n = 30000) %>%
+    slice_sample.(n = 30000) %>%
     as.data.table()
 }
 
