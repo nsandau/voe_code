@@ -310,35 +310,40 @@ do_subset <- function(df,
 
 
 split_multi_outc <- function(df) {
-    df <- dtplyr::lazy_dt(df) %>% group_by(studlab)
+    outcomes <- df %>%
+        filter.(n() > 1, .by = "studlab") %>%
+        distinct.(outcome) %>%
+        pull(outcome)
 
-    multi_df <- df %>%
-        filter(n() > 1) %>%
-        as.data.table()
+    loop_out <- list()
+    for (outc in outcomes) {
+        prim_df <- df %>%
+            filter.(outcome == outc)
 
-    unq_df <- df %>%
-        filter(n() <= 1) %>%
-        as.data.table()
+        prim_studlabs <- prim_df %>%
+            distinct.(studlab) %>%
+            pull.(studlab)
 
-    split_list <- multi_df %>%
-        split(by = "studlab", drop = T) %>%
-        map(~ split(.x, by = "outcome", drop = T))
+        rest_df <- df %>%
+            filter.(!studlab %in% prim_studlabs)
+        rest_multi_studlab <- rest_df %>%
+            filter.(n() > 1, .by = "studlab")
 
-    idx <- split_list %>% map(~ seq_along(.x))
-
-    grid <- exec("expand_grid", !!!idx, .name_repair = "minimal")
-
-    list_out <- list()
-    for (row in 1:nrow(grid)) {
-        df_list <- list()
-        for (col in 1:ncol(grid)) {
-            df_idx <- grid[[row, col]]
-            df_list[[col]] <- split_list[[col]][[df_idx]]
+        if (nrow(rest_multi_studlab) == 0) {
+            if (nrow(rest_df) > 0) {
+                loop_out[[outc]] <- list(prim_df, rest_df)
+            }
+            else {
+                loop_out[[outc]] <- list(prim_df)
+            }
+        } else {
+            split_list <- split_outc(rest_df)
+            bind_df <- c(list(prim_df), flatten(split_list))
+            loop_out[[outc]] <- bind_df
         }
-        df_list[[col + 1]] <- unq_df # evt adde tjek for om unq_df har 0 rows
-        list_out[[row]] <- df_list
     }
-    return(list_out)
+
+    return(loop_out)
 }
 
 

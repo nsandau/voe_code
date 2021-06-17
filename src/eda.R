@@ -25,7 +25,9 @@ for (outc in outcomes) {
     rest_multi_studlab <- rest_df %>% filter.(n() > 1, .by = "studlab")
 
     if (nrow(rest_multi_studlab) == 0) {
-        if (nrow(rest_df) > 0) {loop_out[[outc]] <- list(prim_df, rest_df)} 
+        if (nrow(rest_df) > 0) {
+            loop_out[[outc]] <- list(prim_df, rest_df)
+            } 
         else {
             loop_out[[outc]] <- list(prim_df)
         }
@@ -45,8 +47,9 @@ test_subs <- subsets_multi_outc['14371']
 test_splits <- subsets_multi_outc %>% map(split_outc)
 
 
-test_splits %>% map(~map(.x, rbindlist))
+test_splits %>% map(~map(.x, rbindlist)) %>% flatten()
 
+test <- test_splits %>% flatten() %>% map(rbindlist)
 
 test_list[[2]]
 

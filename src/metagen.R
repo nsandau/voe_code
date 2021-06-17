@@ -317,13 +317,11 @@ subsets_multi_outc <- subsets %>%
 cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-
 if (OUTCOME == "func") {
-  split_cores <- 2
+  split_cores <- as.integer(cores * 0.25)
 } else {
   split_cores <- cores
 }
-
 
 plan(multicore, workers = split_cores)
 tic("Multi outcome split dfs ")
@@ -335,7 +333,8 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 subsets_multi_outc <- subsets_multi_outc %>%
   flatten() %>%
-  map(~ rbindlist(.x))
+  map(rbindlist)
+
 cat("No of dfs after split multi outcomes:", length(subsets_multi_outc), "\n")
 
 tic("Concat subsets")
