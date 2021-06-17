@@ -1,10 +1,19 @@
 df <- data %>% filter.(follow_up == 12)
 
-outc <- "dash"
+
+subsets <- read_rds("output/subsets_qol.rds")
+
+df <- subsets_multi_outc[['14371']]
+
+df %>% filter.(n() >1, .by = "studlab")
 
 ### FUNC STARTER: input: DF
 split_outc <- function(df) {
-outcomes <- df %>% filter.(n() > 1, .by = "outcome") %>% distinct.(outcome) %>% pull(outcome)
+
+outcomes <- df %>% 
+filter.(n() > 1, .by = "studlab") %>% 
+distinct.(outcome) %>%
+ pull(outcome)
 
 loop_out <- list()
 for (outc in outcomes) {
@@ -16,10 +25,14 @@ for (outc in outcomes) {
     rest_multi_studlab <- rest_df %>% filter.(n() > 1, .by = "studlab")
 
     if (nrow(rest_multi_studlab) == 0) {
-        loop_out[[outc]] <- rbind(prim_df, rest_df)
+        if (nrow(rest_df) > 0) {loop_out[[outc]] <- list(prim_df, rest_df)} 
+        else {
+            loop_out[[outc]] <- list(prim_df)
+        }
+        
         } else {
             split_list <- split_outc(rest_df) 
-            bind_df <- rbindlist(c(list(prim_df), split_list), use.names =F)
+            bind_df <- c(list(prim_df), flatten(split_list))
             loop_out[[outc]] <- bind_df
         }
 }
@@ -27,15 +40,12 @@ for (outc in outcomes) {
         return(loop_out)
 }
 
+test_subs <- subsets_multi_outc['14371']
+
+test_splits <- subsets_multi_outc %>% map(split_outc)
 
 
-
-test_list <- split_outc(df)
-
-
-test_list
-
-test_list %>% accumulate(~rbindlist(.x, use.names = F), .dir = "backward")
+test_splits %>% map(~map(.x, rbindlist))
 
 
 test_list[[2]]
