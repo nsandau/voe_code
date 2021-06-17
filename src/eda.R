@@ -1,90 +1,44 @@
-df <- data
+df <- data %>% filter.(follow_up == 12)
 
-df <- dtplyr::lazy_dt(df) %>% group_by(studlab)
+outc <- "dash"
 
-    multi_df <- df %>%
-        filter(n() > 1) %>%
-        as.data.table()
+### FUNC STARTER: input: DF
+split_outc <- function(df) {
+outcomes <- df %>% filter.(n() > 1, .by = "outcome") %>% distinct.(outcome) %>% pull(outcome)
 
-multi_df
+loop_out <- list()
+for (outc in outcomes) {
+    prim_df <- df %>% filter.(outcome == outc)
 
+    prim_studlabs <- prim_df %>% distinct.(studlab) %>% pull.(studlab)
 
+    rest_df <- df %>% filter.(!studlab %in% prim_studlabs)
+    rest_multi_studlab <- rest_df %>% filter.(n() > 1, .by = "studlab")
 
-outcome_type <- OUTCOME
-df <- 
+    if (nrow(rest_multi_studlab) == 0) {
+        loop_out[[outc]] <- rbind(prim_df, rest_df)
+        } else {
+            split_list <- split_outc(rest_df) 
+            bind_df <- rbindlist(c(list(prim_df), split_list), use.names =F)
+            loop_out[[outc]] <- bind_df
+        }
+}
 
- if (outcome_type == "qol") {
-        outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
-    } else if (outcome_type == "func") {
-        outcome_vals <- c(unique(df$bin_outcome), 98:99) # 98: PROMS + CS,99 PROMS
-    } else if (outcome_type == "bin") {
-        outcome_vals <- unique(df$bin_outcome)
-    }
-
-    # neer
-    neer_vals <- unique(df$bin_neer)
-    neer_vals <- neer_vals[neer_vals %in% 2:4]
-
-    # outcome
-    interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
-
-    # create grid
-    grid <- expand_grid(
-        language = unique(df$bin_lang),
-        year = unique(df$bin_year),
-        design = unique(df$bin_design),
-        age = unique(df$bin_age),
-        neer_34part = unique(df$bin_34part),
-        toi = unique(df$bin_toi),
-        doctreat = unique(df$bin_doctreat),
-        loss_fu = unique(df$bin_loss_fu),
-        outcome = outcome_vals,
-        follow_up = c(unique(df$follow_up), 98:99), # 98: longest fu from each study, 99: periods of fu
-        fu_period = unique(df$bin_fu_period),
-        outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
-        intervention = interv_vals,
-        neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
-        imputed = unique(df$bin_imputed),
-        ttfu = unique(df$bin_ttfu)
-    ) %>%
-        mutate(
-            across(where(is.numeric), as.integer),
-            across(where(is.character), as_factor)
-        ) %>%
-        as.data.table()
-
-    nrow_before <- nrow(grid)
-    cat("Rows before removal of nulls:", nrow_before, "\n")
-
-    # remove null combinations
-    combs <- list(
-        c("follow_up", "outcome"),
-        c("intervention", "outcome"),
-        c("intervention", "follow_up")
-    )
-    grid <- remove_nulls(df, grid, combs)
-    nrow_after <- nrow(grid)
-    cat("Rows after removal of nulls:", nrow_after, "\n")
-    nrow_diff <- nrow_before - nrow_after
-    cat("Rows removed:", nrow_diff, round(nrow_diff / nrow_before) * 100, "%", "\n")
-    
+        return(loop_out)
+}
 
 
 
 
+test_list <- split_outc(df)
 
 
+test_list
+
+test_list %>% accumulate(~rbindlist(.x, use.names = F), .dir = "backward")
 
 
-
-subsets<- read_rds("output/subsets_qol.rds")
-
-multi_test <- subsets_multi_outc %>% keep(~nrow(.x) > 6) %>% map(as.data.table)
-
-
-multi_test
-
-
+test_list[[2]]
 
 ### FUNC START. TAGER EN DF AF GANGEN
 multi_split_fun <- function(df) {
