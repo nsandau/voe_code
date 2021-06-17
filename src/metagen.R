@@ -34,6 +34,9 @@ DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 
 ##### LIBRARIES
 
+mem <- list(system("free -m"))
+mem
+
 pkgs <- c(
   "esc",
   "conflicted",
@@ -44,7 +47,6 @@ pkgs <- c(
   "here",
   "lubridate",
   "purrr",
-  "benchmarkme",
   "tictoc",
   "data.table",
   "arrow",
@@ -267,14 +269,15 @@ data <- data_cont %>%
   as.data.table()
 
 # Create selection grids  ---------------------------------------------------
-cat("Creating selection grid ", "\n")
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
 if (DEV_RUN == TRUE) {
   data <- data %>%
     slice_sample.(prop = 0.3) %>%
     as.data.table()
 }
 
+cat("Creating selection grid ", "\n")
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME)
