@@ -268,6 +268,7 @@ data <- data_cont %>%
 
 # Create selection grids  ---------------------------------------------------
 cat("Creating selection grid ", "\n")
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 if (DEV_RUN == TRUE) {
   data <- data %>%
     slice_sample.(prop = 0.3) %>%
