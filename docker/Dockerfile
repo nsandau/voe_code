@@ -12,8 +12,7 @@ RUN conda update --all -y && \
     r-lobstr \
     r-meta \
     r-here \
+    r-tidytable \
     r-conflicted && \ 
+    conda install -y -c nclibz r-esc && \
     conda clean -ya 
-
-# Install some via cran as they cause r-base to downgrade 
-RUN R -e "install.packages(c('pacman', 'esc'), repos = 'https://cloud.r-project.org/')"

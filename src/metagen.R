@@ -63,7 +63,6 @@ cores <- future::availableCores()
 ram <- benchmarkme::get_ram()
 cat("Outcome is:", OUTCOME, "\n")
 cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
-cat("Current dir:", getwd(), "\n")
 
 conflict_prefer("filter", "dplyr", quiet = TRUE)
 conflict_prefer("between", "dplyr", quiet = TRUE)
@@ -168,6 +167,8 @@ data_extract <- data_extract %>%
 expect_true(all(data_extract$total_n - replace_na(data_extract$total_loss_to_fu, 0) > 15))
 
 # RESHAPE DF --------------------------------------------------------------
+cat("Reshaping DF", "\n")
+
 data_cont <- data_extract %>%
   select(
     -starts_with(all_of(OUTCOME_DESELECT))
@@ -224,6 +225,7 @@ if (OUTCOME == "func") {
 }
 
 # CALCULATE SMD for NUMERIC OUTCOMES-----------------------------
+cat("Calculating SMD", "\n")
 
 if (OUTCOME %in% c("qol", "func")) {
   data_cont <- data_cont %>%
@@ -251,7 +253,7 @@ if (OUTCOME %in% c("qol", "func")) {
 }
 
 # CREATE BINARYS AND DF FOR EACH OUTCOME TYPE -------------------------
-
+cat("Creating binarys", "\n")
 if (OUTCOME %in% c("qol", "func")) {
   EFFECT_SIZE_COLS <- c("smd", "se")
 } else if (OUTCOME == "bin") {
@@ -265,13 +267,12 @@ data <- data_cont %>%
   as.data.table()
 
 # Create selection grids  ---------------------------------------------------
-
+cat("Creating selection grid ", "\n")
 if (DEV_RUN == TRUE) {
   data <- data %>%
     slice_sample.(prop = 0.3) %>%
     as.data.table()
 }
-
 
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
@@ -284,7 +285,7 @@ write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feath
 toc()
 
 # Subset data -------------------------------------------------------------
-
+cat("Starting subsets", "\n")
 if (DEV_RUN == TRUE) {
   sel_grid <- sel_grid %>%
     slice_sample.(n = 30000) %>%
@@ -311,7 +312,7 @@ plan(sequential)
 # toc()
 
 ###### split multiple outcome dfs
-
+cat("Starting multi outc split", "\n")
 subsets_multi_outc <- subsets %>%
   keep(~ any(duplicated(.x[["studlab"]])))
 cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
