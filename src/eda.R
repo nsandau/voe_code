@@ -1,3 +1,18 @@
+
+library(tidyverse)
+library(tidytable)
+
+v1 <- 1:1000
+v2  <- 1:1000
+bench::mark(
+expand_grid(v1, v2),
+expand_grid.(v1,v2),
+check = F
+)
+
+expand_grid.(v1,v2)
+
+
 df <- data %>% filter.(follow_up == 12)
 
 
