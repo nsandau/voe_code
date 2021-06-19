@@ -95,7 +95,7 @@ make_binary <- function(df, outcome) {
 
 #### Function to remove null_combinations in grid ----------------------------------------
 
-
+## kan også flytte den ud af sel_grid func så jeg kan køre multicore??
 remove_nulls <- function(df, grid, list_of_combos) {
     df <- df %>%
         select(follow_up, bin_outcome, interv) %>% # ingen grund til at selecte?
@@ -104,6 +104,9 @@ remove_nulls <- function(df, grid, list_of_combos) {
             intervention = interv
         )
 
+    # for each combo:
+    # create selection_grid
+    # pmap over rows using var1, var2
 
     for (i in seq_along(list_of_combos)) { # må kunne gøres bedre. Med sel grid?
         var1 <- list_of_combos[[i]][1]

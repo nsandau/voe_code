@@ -320,7 +320,7 @@ cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 if (OUTCOME == "func") {
-  split_cores <- as.integer(cores * 0.25)
+  split_cores <- 5
 } else {
   split_cores <- cores
 }
