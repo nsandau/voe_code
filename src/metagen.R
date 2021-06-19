@@ -34,9 +34,6 @@ DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 
 ##### LIBRARIES
 
-mem <- list(system("free -m"))
-mem
-
 pkgs <- c(
   "esc",
   "conflicted",

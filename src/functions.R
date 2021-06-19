@@ -98,14 +98,14 @@ make_binary <- function(df, outcome) {
 
 remove_nulls <- function(df, grid, list_of_combos) {
     df <- df %>%
-        select(follow_up, bin_outcome, interv) %>%
+        select(follow_up, bin_outcome, interv) %>% # ingen grund til at selecte?
         rename(
             outcome = bin_outcome,
             intervention = interv
         )
 
 
-    for (i in seq_along(list_of_combos)) {
+    for (i in seq_along(list_of_combos)) { # må kunne gøres bedre. Med sel grid?
         var1 <- list_of_combos[[i]][1]
         var2 <- list_of_combos[[i]][2]
         var1_vals <- unique(df[[var1]])
@@ -337,9 +337,8 @@ split_multi_outc <- function(df) {
                 loop_out[[outc]] <- list(prim_df)
             }
         } else {
-            split_list <- split_outc(rest_df)
-            bind_df <- c(list(prim_df), flatten(split_list))
-            loop_out[[outc]] <- bind_df
+            split_list <- split_multi_outc(rest_df)
+            loop_out[[outc]] <- c(list(prim_df), flatten(split_list))
         }
     }
 
