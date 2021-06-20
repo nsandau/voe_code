@@ -1,22 +1,59 @@
 
 library(tidyverse)
 library(tidytable)
+library(arrow)
 
-v1 <- 1:1000
-v2  <- 1:1000
+
+subsets_tt <- tidytable(list = subsets)
+
+
+subsets_qol <- read_rds("output/subsets_qol.rds")
+
+
+subsets_dt <- data.table(subsets = subsets_qol[1:50000])
+
 bench::mark(
-expand_grid(v1, v2),
-expand_grid.(v1,v2),
-check = F
+    write_parquet(subsets_dt, "output/subsets_qol.parquet", version = "2.0"),
+    write_parquet(subsets_dt, "output/subsets_qol.parquet", version = "1.0"),
 )
+    
 
-expand_grid.(v1,v2)
+write_parquet(subsets_qol, "output/subsets_qol.parquet")
 
+
+sel_grid <- read_feather("output/sel_grid_qol.feather")
+
+
+ls() %>% map(~lobstr::obj_size(get(.x))/1024 / 1024)
+
+lobstr::mem_used() / 1024 / 1024
+
+?set_names
+
+?purrr:set_names
+
+
+ls()
+lobstr::obj_size(sel_grid)
+
+arrow::write_parquet(sel_grid,
+"output/sel_grid_qol.parquet",
+ version = "2.0")
+
+get("sel_grid")
+
+sel_grid_parq <- read_parquet("output/sel_grid_qol.parquet")
+
+testthat::expect_equivalent(sel_grid, sel_grid_parq)
+
+dataset["list"] %>% pmap(print)
+
+sub_parq <- read_parquet("output/subsets_tt.parquet/part-0.parquet")
 
 df <- data %>% filter.(follow_up == 12)
 
+read_dataset
 
-subsets <- read_rds("output/subsets_qol.rds")
 
 df <- subsets_multi_outc[['14371']]
 
