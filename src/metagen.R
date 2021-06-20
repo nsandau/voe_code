@@ -69,7 +69,6 @@ conflict_prefer("year", "lubridate", quiet = TRUE)
 conflict_prefer("filter", "dplyr", quiet = T)
 
 
-
 # IMPORT ------------------------------------------------------------------
 data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
   clean_names() %>%
@@ -282,7 +281,7 @@ tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 tic("Writing sel_grid")
-write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
+write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
 toc()
 
 # Subset data -------------------------------------------------------------
@@ -303,14 +302,14 @@ subsets <- sel_grid %>%
   ) %>%
   set_names(seq_along(.)) %>%
   discard(~ is.null(.x))
+plan(sequential)
 toc()
 cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-plan(sequential)
 
-# tic("Writing QOL subsets")
-# write_rds(subsets, here::here("output", str_c("subsets_", OUTCOME, ".rds")))
-# toc()
+tic("Writing subsets")
+write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".parquet")), version = "2.0")
+toc()
 
 ###### split multiple outcome dfs
 cat("Starting multi outc split", "\n")
@@ -320,6 +319,7 @@ cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 if (OUTCOME == "func") {
+  rm("subsets", "sel_grid")
   split_cores <- 5
 } else {
   split_cores <- cores
@@ -339,6 +339,14 @@ subsets_multi_outc <- subsets_multi_outc %>%
 
 cat("No of dfs after split multi outcomes:", length(subsets_multi_outc), "\n")
 
+if (OUTCOME == "func") {
+  tic("Reading subsets")
+  subsets <- read_parquet(here::here("output", str_c("subsets_", OUTCOME, ".parquet")))
+  subsets <- subsets[["subsets"]]
+  toc()
+}
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
 tic("Concat subsets")
 # concat lists
 subsets <- c(
@@ -350,9 +358,9 @@ toc()
 cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-# tic("Writing subsets_final")
-# write_rds(subsets, here::here("output", paste0("subsets_final_", OUTCOME, ".rds")))
-# toc()
+tic("Writing subsets_final")
+write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".parquet")), version = "2.0")
+toc()
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
@@ -370,8 +378,8 @@ cat("Results_df rows", nrow(results_df), "\n")
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_feather(results_df, here::here("output", str_c("results_df_", OUTCOME, ".feather")))
-write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, ".feather")))
+write_parquet(results_df, here::here("output", str_c("results_df_", OUTCOME, ".parquet")), version = "2.0")
+write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, ".parquet")), version = "2.0")
 toc()
 
 # COPY FILES TO erda storage
