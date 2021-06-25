@@ -280,9 +280,9 @@ sel_grid <- data %>%
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-tic("Writing sel_grid")
-write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
-toc()
+# tic("Writing sel_grid")
+# write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
+# toc()
 
 # Subset data -------------------------------------------------------------
 cat("Starting subsets", "\n")
@@ -307,9 +307,9 @@ toc()
 cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-tic("Writing subsets")
-write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".parquet")), version = "2.0")
-toc()
+# tic("Writing subsets")
+# write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".parquet")), version = "2.0")
+# toc()
 
 ###### split multiple outcome dfs
 cat("Starting multi outc split", "\n")
@@ -358,9 +358,9 @@ toc()
 cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-tic("Writing subsets_final")
-write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".parquet")), version = "2.0")
-toc()
+# tic("Writing subsets_final")
+# write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".parquet")), version = "2.0")
+# toc()
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
