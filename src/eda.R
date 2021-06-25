@@ -1,29 +1,4 @@
 
-library(tidyverse)
-library(tidytable)
-library(arrow)
-
-
-subsets_tt <- tidytable(list = subsets)
-
-
-subsets_qol <- read_rds("output/subsets_qol.rds")
-
-
-subsets_dt <- data.table(subsets = subsets_qol[1:50000])
-
-bench::mark(
-    write_parquet(subsets_dt, "output/subsets_qol.parquet", version = "2.0"),
-    write_parquet(subsets_dt, "output/subsets_qol.parquet", version = "1.0"),
-)
-    
-
-write_parquet(subsets_qol, "output/subsets_qol.parquet")
-
-
-sel_grid <- read_feather("output/sel_grid_qol.feather")
-
-
 ls() %>% map(~lobstr::obj_size(get(.x))/1024 / 1024)
 
 lobstr::mem_used() / 1024 / 1024
