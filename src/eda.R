@@ -1,35 +1,18 @@
-
-ls() %>% map(~lobstr::obj_size(get(.x))/1024 / 1024)
-
-lobstr::mem_used() / 1024 / 1024
-
-?set_names
-
-?purrr:set_names
+### func til split outcomes inde i subsets
 
 
-ls()
-lobstr::obj_size(sel_grid)
-
-arrow::write_parquet(sel_grid,
-"output/sel_grid_qol.parquet",
- version = "2.0")
-
-get("sel_grid")
-
-sel_grid_parq <- read_parquet("output/sel_grid_qol.parquet")
-
-testthat::expect_equivalent(sel_grid, sel_grid_parq)
-
-dataset["list"] %>% pmap(print)
-
-sub_parq <- read_parquet("output/subsets_tt.parquet/part-0.parquet")
-
-df <- data %>% filter.(follow_up == 12)
-
-read_dataset
+subset <- subsets_multi_outc[[1]]
 
 
+
+if (any(duplicated(subset[["studlab"]]))) {
+    subset <- split_multi_outc(subset)
+}
+
+
+# og så skal den vel bare flattens?
+
+#### 
 df <- subsets_multi_outc[['14371']]
 
 df %>% filter.(n() >1, .by = "studlab")

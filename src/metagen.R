@@ -43,7 +43,6 @@ pkgs <- c(
   "readxl",
   "here",
   "lubridate",
-  "purrr",
   "tictoc",
   "data.table",
   "arrow",
@@ -59,9 +58,10 @@ source(here("src", "functions.R"))
 
 # PRINT INFO
 cores <- future::availableCores()
-ram <- benchmarkme::get_ram()
+# ram <- benchmarkme::get_ram()
 cat("Outcome is:", OUTCOME, "\n")
-cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
+cat("Using", cores, "cores", "\n")
+# cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 
 conflict_prefer("filter", "dplyr", quiet = TRUE)
 conflict_prefer("between", "dplyr", quiet = TRUE)
