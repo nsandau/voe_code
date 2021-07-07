@@ -2,6 +2,7 @@
 
 *.feather
 *.rds
+*.parquet
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/r,git,linux,python,windows,libreoffice,microsoftoffice
