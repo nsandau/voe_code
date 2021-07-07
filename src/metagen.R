@@ -311,48 +311,14 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 # write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".parquet")), version = "2.0")
 # toc()
 
-###### split multiple outcome dfs
-cat("Starting multi outc split", "\n")
-subsets_multi_outc <- subsets %>%
-  keep(~ any(duplicated(.x[["studlab"]])))
-cat("No of dfs with multi outcomes:", length(subsets_multi_outc), "\n")
+###### split list to multi_out and dfs
+cat("Starting list splitting", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-if (OUTCOME == "func") {
-  rm("subsets", "sel_grid")
-  split_cores <- 5
-} else {
-  split_cores <- cores
-}
-
-plan(multicore, workers = split_cores)
-tic("Multi outcome split dfs ")
-subsets_multi_outc <- subsets_multi_outc %>%
-  future_map(~ split_multi_outc(.x))
-toc()
-plan(sequential)
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-subsets_multi_outc <- subsets_multi_outc %>%
-  flatten() %>%
-  map(rbindlist)
-
-cat("No of dfs after split multi outcomes:", length(subsets_multi_outc), "\n")
-
-if (OUTCOME == "func") {
-  tic("Reading subsets")
-  subsets <- read_parquet(here::here("output", str_c("subsets_", OUTCOME, ".parquet")))
-  subsets <- subsets[["subsets"]]
-  toc()
-}
-cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
-tic("Concat subsets")
-# concat lists
+tic("Concat lists")
 subsets <- c(
-  subsets %>%
-    discard(~ any(duplicated(.x[["studlab"]]))),
-  subsets_multi_outc
+  rrapply(subsets, f = identity, classes = "data.frame", how = "prune"),
+  rrapply(subsets, f = identity, classes = "list", how = "prune") %>%
+    flatten()
 )
 toc()
 cat("Length of final subsets:", length(subsets), "\n")
