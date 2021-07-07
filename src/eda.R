@@ -1,13 +1,68 @@
 ### func til split outcomes inde i subsets
 
+subsets <- read_parquet("output/subsets_qol.parquet")
+subsets <- subsets[["subsets"]]
+
+subsets_multi_outc <- subsets %>%
+  keep(~ any(duplicated(.x[["studlab"]])))
 
 subset <- subsets_multi_outc[[1]]
 
-
+library(rrapply)
 
 if (any(duplicated(subset[["studlab"]]))) {
     subset <- split_multi_outc(subset)
 }
+ 
+
+rrapply_list <- rrapply(subsets, f= identity, classes = "list", how = "prune") %>% 
+flatten()
+
+
+rrapply_dfs <- rrapply(subsets, f= identity, classes = "data.frame", how = "prune")
+
+
+merged_list <- c(rrapply_dfs, rrapply_list)
+
+testthat::expect_equal(keep_list, rrapply_list)
+
+
+length(merged_list)
+
+length(rrapply_list)
+length(rrapply_dfs)
+
+flatten(subsets[1:11])
+
+flatten2 <- function(x) {
+  len <- sum(rapply(x, function(x) 1L))
+  y <- vector('list', len)
+  i <- 0L
+  rapply(x, function(x) { i <<- i+1L; y[[i]] <<- x })
+  y
+}
+
+
+flatten2(subsets[1:11])
+
+
+list.flatten <- function(x, use.names = TRUE, classes = "ANY") {
+  len <- sum(rapply(x, function(x) 1L, classes = classes))
+  y <- vector("list", len)
+  i <- 0L
+  items <- rapply(x, function(x) {
+    i <<- i + 1L
+    y[[i]] <<- x
+    TRUE
+  }, classes = classes)
+  if (use.names && !is.null(nm <- names(items)))
+    names(y) <- nm
+  y
+}
+
+list.flatten(subsets[1:11], classes = "list")
+
+class(subsets)
 
 
 # og så skal den vel bare flattens?
