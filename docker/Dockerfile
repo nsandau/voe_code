@@ -52,6 +52,7 @@ RUN conda update --all -y && \
     r-meta \
     r-here \
     r-tidytable \
-    r-conflicted && \ 
+    r-conflicted \
+    r-rrapply && \ 
     conda install -y -c nclibz r-esc && \
     conda clean -afy 

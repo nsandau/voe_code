@@ -49,7 +49,8 @@ pkgs <- c(
   "lobstr",
   "meta",
   "tidyverse",
-  "tidytable"
+  "tidytable",
+  "rrapply"
 )
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
 
