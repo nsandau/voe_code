@@ -344,8 +344,8 @@ do_subset <- function(df,
         return(NULL)
     }
     if (any(duplicated(subset[["studlab"]]))) {
-        subset <- split_multi_outc(subset) %>% 
-        map(rbindlist)
+        subset <- split_multi_outc(subset) %>%
+            map(rbindlist)
     }
     else {
         return(subset)
