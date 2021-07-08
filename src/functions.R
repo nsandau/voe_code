@@ -159,10 +159,8 @@ split_multi_outc <- function(df) {
 
         rest_df <- df %>%
             filter.(!studlab %in% prim_studlabs)
-        rest_multi_studlab <- rest_df %>% # kunne flytte den her ind i if statement så den ikke kører hver gang men kun hvis der er duplicates
-            filter.(n() > 1, .by = "studlab")
 
-        if (nrow(rest_multi_studlab) == 0) {
+        if (!any(duplicated(rest_df$studlab))) {
             if (nrow(rest_df) > 0) {
                 loop_out[[outc]] <- list(prim_df, rest_df)
             }
