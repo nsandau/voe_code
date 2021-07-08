@@ -93,40 +93,6 @@ make_binary <- function(df, outcome) {
     return(df_bin)
 }
 
-#### Function to remove null_combinations in grid ----------------------------------------
-
-## kan også flytte den ud af sel_grid func så jeg kan køre multicore??
-remove_nulls <- function(df, grid, list_of_combos) {
-    df <- df %>%
-        select(follow_up, bin_outcome, interv) %>% # ingen grund til at selecte?
-        rename(
-            outcome = bin_outcome,
-            intervention = interv
-        )
-
-    # for each combo:
-    # create selection_grid
-    # pmap over rows using var1, var2
-
-    for (i in seq_along(list_of_combos)) { # må kunne gøres bedre. Med sel grid?
-        var1 <- list_of_combos[[i]][1]
-        var2 <- list_of_combos[[i]][2]
-        var1_vals <- unique(df[[var1]])
-        var2_vals <- unique(df[[var2]])
-
-        for (val1 in var1_vals) {
-            for (val2 in var2_vals) {
-                n_rows <- df[get(var1) == val1 & get(var2) == val2] %>%
-                    nrow()
-                if (n_rows == 0) {
-                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
-                }
-            }
-        }
-    }
-    return(grid)
-}
-
 
 ### CREATE SELECTION GRID ------------------------------------------------------------
 
@@ -170,21 +136,6 @@ make_sel_grid <- function(df, outcome_type = NULL) {
             across(where(is.character), as_factor)
         ) %>%
         as.data.table()
-
-    nrow_before <- nrow(grid)
-    cat("Rows before removal of nulls:", nrow_before, "\n")
-
-    # remove null combinations
-    combs <- list(
-        c("follow_up", "outcome"),
-        c("intervention", "outcome"),
-        c("intervention", "follow_up")
-    )
-    grid <- remove_nulls(df, grid, combs)
-    nrow_after <- nrow(grid)
-    cat("Rows after removal of nulls:", nrow_after, "\n")
-    nrow_diff <- nrow_before - nrow_after
-    cat("Rows removed:", nrow_diff, round(nrow_diff / nrow_before) * 100, "%", "\n")
     return(grid)
 }
 
