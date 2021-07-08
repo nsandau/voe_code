@@ -1,5 +1,5 @@
 
-FROM ubuntu:hirsute
+FROM ubuntu:focal
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive
 
@@ -53,6 +53,7 @@ RUN conda update --all -y && \
     r-here \
     r-tidytable \
     r-conflicted \
+    r-data.table \
     r-rrapply && \ 
     conda install -y -c nclibz r-esc && \
     conda clean -afy 
