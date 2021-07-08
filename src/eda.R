@@ -1,3 +1,64 @@
+
+remove_nulls <- function(df, grid, list_of_combos) {
+    df <- df %>%
+        rename(
+            outcome = bin_outcome,
+            intervention = interv
+        )
+
+    # for each combo:
+    # create selection_grid
+    # pmap over rows using var1, var2
+
+    for (i in seq_along(list_of_combos)) { # må kunne gøres bedre. Med sel grid?
+        var1 <- list_of_combos[[i]][1]
+        var2 <- list_of_combos[[i]][2]
+        var1_vals <- unique(df[[var1]])
+        var2_vals <- unique(df[[var2]])
+
+        for (val1 in var1_vals) {
+            for (val2 in var2_vals) {
+                n_rows <- df[get(var1) == val1 & get(var2) == val2] %>%
+                    nrow()
+                if (n_rows == 0) {
+                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+                }
+            }
+        }
+    }
+    return(grid)
+}
+
+df <- data
+combs <- list(
+    c("follow_up", "outcome"),
+    c("intervention", "outcome"),
+    c("intervention", "follow_up")
+)
+
+expand_grid(
+    var1 = unique(df[combs[[1]][1]]),
+    var2 = unique(df[combs[[1]][2]])
+)
+
+
+
+nrow_before <- nrow(grid)
+cat("Rows before removal of nulls:", nrow_before, "\n")
+
+# remove null combinations
+
+
+
+
+grid <- remove_nulls(df, grid, combs)
+nrow_after <- nrow(grid)
+cat("Rows after removal of nulls:", nrow_after, "\n")
+nrow_diff <- nrow_before - nrow_after
+cat("Rows removed:", nrow_diff, round(nrow_diff / nrow_before) * 100, "%", "\n")
+
+
+
 ### func til split outcomes inde i subsets
 
 

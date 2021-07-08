@@ -31,6 +31,7 @@ BASE_PATH <- "/home/kmd592_ku_dk"
 ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
 MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
+tic("Total runtime:")
 
 ##### LIBRARIES
 
@@ -208,7 +209,8 @@ data_cont <- data_extract %>%
   )
 
 ### TESTS ###
-testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
+testthat::expect_setequal(data_        expand_grid.()
+cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
 ####
 
@@ -281,6 +283,25 @@ sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME)
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
+# remove nulls
+combs <- list(
+    c("follow_up", "outcome"),
+    c("intervention", "outcome"),
+    c("intervention", "follow_up")
+)
+
+nrow_before <- nrow(sel_grid)
+cat("Rows before removal of nulls:", nrow_before, "\n")
+
+tic("Remove nulls")
+sel_grid <- remove_nulls(df= data, grid = sel_grid, list_of_combos = combs)
+toc()
+
+nrow_after <- nrow(sel_grid)
+cat("Rows after removal of nulls:", nrow_after, "\n")
+nrow_diff <- nrow_before - nrow_after
+cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
 
 # tic("Writing sel_grid")
 # write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
@@ -357,3 +378,4 @@ dir.create(to_path, recursive = T)
 file_names <- list.files(from_path, ".rds$|.feather$") %>%
   str_subset(OUTCOME)
 file.copy(file.path(from_path, file_names), to_path)
+toc()

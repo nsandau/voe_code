@@ -139,6 +139,37 @@ make_sel_grid <- function(df, outcome_type = NULL) {
     return(grid)
 }
 
+
+# remove null combos from grid
+
+remove_nulls <- function(df, grid, list_of_combos) {
+    df <- df %>%
+        select.(follow_up, bin_outcome, interv) %>% # ingen grund til at selecte?
+        rename.(
+            outcome = bin_outcome,
+            intervention = interv
+        )
+
+    for (i in seq_along(list_of_combos)) {
+        var1 <- list_of_combos[[i]][1]
+        var2 <- list_of_combos[[i]][2]
+        var1_vals <- unique(df[[var1]])
+        var2_vals <- unique(df[[var2]])
+
+        for (val1 in var1_vals) {
+            for (val2 in var2_vals) {
+                n_rows <- nrow(df[get(var1) == val1 & get(var2) == val2])
+                if (n_rows == 0) {
+                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+                }
+            }
+        }
+    }
+    return(grid)
+}
+
+
+
 # split multi outcome -----------------------------------------
 
 
@@ -390,75 +421,4 @@ gather_pvals <- function(data) {
                     method = "random"
                 )
         )
-}
-
-
-if (sys.nframe() == 0) { # if __name__ == __main__
-
-    ## TESTING
-
-    # data split
-
-    sel_grid_qol %>%
-        slice_head(n = 50) %>%
-        View()
-    sel_grid_func %>%
-        slice_head(n = 1000) %>%
-        View()
-
-    # do subsets
-    subsets_qol <- sel_grid_qol %>%
-        slice_head(n = 10000) %>%
-        future_pmap(
-            .l = .,
-            .f = do_subset,
-            df = data_qol
-        ) %>%
-        set_names(seq_along(.)) %>%
-        discard(~ is.null(.x))
-
-
-    subsets_func <- sel_grid_func %>%
-        slice_head(n = 50000) %>%
-        future_pmap(
-            .l = .,
-            .f = do_subset,
-            df = data_func
-        ) %>%
-        set_names(seq_along(.)) # %>%
-    discard(~ is.null(.x))
-
-    # splitting dfs with multi outcome
-
-    multi_out_qol <- subsets_qol %>%
-        keep(~ any(duplicated(.x[["studlab"]])))
-
-    multi_out_func <- subsets_func %>%
-        keep(~ any(duplicated(.x[["studlab"]])))
-
-    tic()
-    multi_out_qol_splits <- multi_out_qol %>% future_map(split_multi_outc)
-    tictoc::toc()
-
-    subsets_qol_final <- c(
-        subsets_qol %>%
-            discard(~ any(duplicated(.x[["studlab"]]))),
-        multi_out_qol_splits %>% flatten()
-    )
-
-
-
-    ## profiling
-    profvis(multi_out_func[1:50] %>% map(split_multi_outc))
-
-
-    profvis::profvis(sel_grid_qol %>%
-        slice_head(n = 50000) %>%
-        pmap(
-            .l = .,
-            .f = do_subset,
-            df = data_qol
-        ) %>%
-        set_names(seq_along(.)) %>%
-        discard(~ is.null(.x)))
 }
