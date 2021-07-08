@@ -1,6 +1,48 @@
 ### func til split outcomes inde i subsets
 
 
+multi_df <- data_cont %>% filter(studlab == "rangan 2015", follow_up == 6)
+
+split_multi_outc <- function(df) {
+    outcomes <- df %>%
+        filter.(n() > 1, .by = "studlab") %>%
+        distinct.(outcome) %>%
+        pull(outcome)
+
+    loop_out <- list()
+    for (outc in outcomes) {
+        prim_df <- df %>%
+            filter.(outcome == outc)
+
+        prim_studlabs <- prim_df %>%
+            distinct.(studlab) %>%
+            pull.(studlab)
+
+        rest_df <- df %>%
+            filter.(!studlab %in% prim_studlabs)
+
+        if (!any(duplicated(rest_df$studlab))) {
+            if (nrow(rest_df) > 0) {
+                loop_out[[outc]] <- list(prim_df, rest_df)
+            }
+            else {
+                loop_out[[outc]] <- list(prim_df)
+            }
+        } else {
+            split_list <- split_multi_outc(rest_df)
+            loop_out[[outc]] <- c(list(prim_df), flatten(split_list))
+        }
+    }
+
+    return(loop_out)
+}
+
+new_func <- split_multi_outc(multi_df)
+
+new_func
+
+orig_func
+
 
 subsets[[1]][["smd"]]
 
