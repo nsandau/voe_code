@@ -31,7 +31,6 @@ BASE_PATH <- "/home/kmd592_ku_dk"
 ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
 MODI_PATH <- file.path(BASE_PATH, "modi_mount")
 DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
-tic("Total runtime:")
 
 ##### LIBRARIES
 
@@ -54,6 +53,7 @@ pkgs <- c(
   "rrapply"
 )
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
+tic("Total runtime:")
 
 # import functions
 source(here("src", "functions.R"))
