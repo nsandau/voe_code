@@ -209,8 +209,7 @@ data_cont <- data_extract %>%
   )
 
 ### TESTS ###
-testthat::expect_setequal(data_        expand_grid.()
-cont %>% filter(is.na(con_n)) %>% nrow(), 0)
+testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
 ####
 
@@ -286,16 +285,16 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # remove nulls
 combs <- list(
-    c("follow_up", "outcome"),
-    c("intervention", "outcome"),
-    c("intervention", "follow_up")
+  c("follow_up", "outcome"),
+  c("intervention", "outcome"),
+  c("intervention", "follow_up")
 )
 
 nrow_before <- nrow(sel_grid)
 cat("Rows before removal of nulls:", nrow_before, "\n")
 
 tic("Remove nulls")
-sel_grid <- remove_nulls(df= data, grid = sel_grid, list_of_combos = combs)
+sel_grid <- remove_nulls(df = data, grid = sel_grid, list_of_combos = combs)
 toc()
 
 nrow_after <- nrow(sel_grid)
