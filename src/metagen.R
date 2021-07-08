@@ -325,8 +325,6 @@ toc()
 cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-subsets
-
 # tic("Writing subsets_final")
 # write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".parquet")), version = "2.0")
 # toc()
