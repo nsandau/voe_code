@@ -61,6 +61,7 @@ source(here("src", "functions.R"))
 cores <- future::availableCores()
 # ram <- benchmarkme::get_ram()
 cat("Outcome is:", OUTCOME, "\n")
+cat("DEV_RUN:", DEV_RUN, "\n")
 cat("Using", cores, "cores", "\n")
 # cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 
@@ -317,8 +318,8 @@ cat("Starting list splitting", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tic("Concat lists")
 subsets <- c(
-  rrapply(subsets, f = identity, classes = "data.frame", how = "prune"),
-  rrapply(subsets, f = identity, classes = "list", how = "prune") %>%
+  rrapply(subsets, f = identity, classes = "data.frame", how = "flatten"),
+  rrapply(subsets, f = identity, classes = "list", how = "flatten") %>%
     flatten()
 )
 toc()
