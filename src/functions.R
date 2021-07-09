@@ -144,7 +144,7 @@ make_sel_grid <- function(df, outcome_type = NULL) {
 
 remove_nulls <- function(df, grid, list_of_combos) {
     df <- df %>%
-        select.(follow_up, bin_outcome, interv) %>% # ingen grund til at selecte?
+        select.(-outcome) %>% # ingen grund til at selecte?
         rename.(
             outcome = bin_outcome,
             intervention = interv

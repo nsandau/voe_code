@@ -352,7 +352,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = cores)
+plan(multicore, workers = 4)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
