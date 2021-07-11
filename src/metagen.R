@@ -69,6 +69,7 @@ cores <- future::availableCores()
 # ram <- benchmarkme::get_ram()
 cat("Outcome is:", OUTCOME, "\n")
 cat("DEV_RUN:", DEV_RUN, "\n")
+cat("SPLIT_NO:", SPLIT_NO, "\n")
 cat("Using", cores, "cores", "\n")
 # cat("Using", cores, "cores, and", round(ram / 1024 / 1024 / 1024), "gb ram", "\n")
 
@@ -374,7 +375,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = cores)
+plan(multicore, workers = 20)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
