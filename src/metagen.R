@@ -16,12 +16,18 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) {
   stop("Need to supply outcome", call. = FALSE)
 }
-# define outcome
+# OUTCOME ARGUMENT
 testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
 OUTCOME <- args[1]
 
-# if second argument given: conduct dev-run
-if (is.na(args[2])) {
+# SPLIT ARGUMENT
+N_SPLITS <- 4
+testthat::expect_true(args[2] %in% as.character(1:N_SPLITS))
+SPLIT_NO <- as.integer(args[2])
+
+
+# if third argument given: conduct dev-run
+if (is.na(args[3])) {
   DEV_RUN <- FALSE
 } else {
   DEV_RUN <- TRUE
@@ -302,6 +308,21 @@ cat("Rows after removal of nulls:", nrow_after, "\n")
 nrow_diff <- nrow_before - nrow_after
 cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
 
+
+if (OUTCOME %in% c("func", "bin")) {
+  cat("Splitting sel_grid")
+  part <- floor(nrow(sel_grid) / N_SPLITS)
+
+  start <- ((SPLIT_NO - 1) * part + 1)
+  stop <- (SPLIT_NO * part)
+
+  if (SPLIT_NO == N_SPLITS) {
+    stop <- nrow(sel_grid)
+  }
+
+  sel_grid <- sel_grid[start:stop, ]
+}
+
 # tic("Writing sel_grid")
 # write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
 # toc()
@@ -366,15 +387,6 @@ cat("Results_df rows", nrow(results_df), "\n")
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_parquet(results_df, here::here("output", str_c("results_df_", OUTCOME, ".parquet")), version = "2.0")
-write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, ".parquet")), version = "2.0")
-toc()
-
-# COPY FILES TO erda storage
-from_path <- here::here("output")
-to_path <- file.path(ERDA_PATH, "VOE_OUTPUT", OUTCOME, DATE)
-dir.create(to_path, recursive = T)
-file_names <- list.files(from_path, ".rds$|.feather$") %>%
-  str_subset(OUTCOME)
-file.copy(file.path(from_path, file_names), to_path)
+write_parquet(results_df, here::here("output", str_c("results_df_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
+write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
 toc()

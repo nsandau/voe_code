@@ -174,19 +174,13 @@ remove_nulls <- function(df, grid, list_of_combos) {
 
 
 split_multi_outc <- function(df) {
-    outcomes <- df %>%
-        filter.(n() > 1, .by = "studlab") %>%
-        distinct.(outcome) %>%
-        pull(outcome)
+    outcomes <- unique(df[duplicated(df[["studlab"]])][["outcome"]])
 
     loop_out <- list()
     for (outc in outcomes) {
-        prim_df <- df %>%
-            filter.(outcome == outc)
+        prim_df <- df[outcome == outc]
 
-        prim_studlabs <- prim_df %>%
-            distinct.(studlab) %>%
-            pull.(studlab)
+        prim_studlabs <- unique(prim_df[["studlab"]])
 
         rest_df <- df %>%
             filter.(!studlab %in% prim_studlabs)
@@ -203,7 +197,6 @@ split_multi_outc <- function(df) {
             loop_out[[outc]] <- c(list(prim_df), flatten(split_list))
         }
     }
-
     return(loop_out)
 }
 
