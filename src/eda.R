@@ -1,45 +1,187 @@
 
-remove_nulls <- function(df, grid, list_of_combos) {
-    df <- df %>%
-        rename(
-            outcome = bin_outcome,
-            intervention = interv
-        )
+sel_grid <- read_parquet(here("output", "sel_grid_qol.parquet"))
+dim(sel_grid)
 
-    # for each combo:
-    # create selection_grid
-    # pmap over rows using var1, var2
+OUTCOME <- "bin"
+args <- c("bin", "1")
 
-    for (i in seq_along(list_of_combos)) { # må kunne gøres bedre. Med sel grid?
-        var1 <- list_of_combos[[i]][1]
-        var2 <- list_of_combos[[i]][2]
-        var1_vals <- unique(df[[var1]])
-        var2_vals <- unique(df[[var2]])
+### ARGS
+N_SPLITS <- 4
 
-        for (val1 in var1_vals) {
-            for (val2 in var2_vals) {
-                n_rows <- df[get(var1) == val1 & get(var2) == val2] %>%
-                    nrow()
-                if (n_rows == 0) {
-                    grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
-                }
-            }
-        }
+testthat::expect_true(args[2] %in% as.character(1:N_SPLITS))
+
+SPLIT_NO <- as.integer(args[2])
+
+
+# start split
+if (OUTCOME %in% c("func", "bin")) {
+    part <- floor(nrow(sel_grid) / N_SPLITS)
+
+    start <- ((SPLIT_NO - 1) * part + 1)
+    stop <- (SPLIT_NO * part)
+
+    if (SPLIT_NO == N_SPLITS) {
+        stop <- nrow(sel_grid)
     }
-    return(grid)
+
+    sel_grid <- sel_grid[start:stop, ]
 }
 
+dim(sel_grid)
+
+
+
+########
+
+outcomes <- unique(df[duplicated(df[["studlab"]])][["outcome"]])
+outcomes
+
+df[]
+
+loop_out <- list()
+for (outc in outcomes) {
+    prim_df <- df[outcome == outc]
+
+    prim_studlabs <- unique(prim_df[["studlab"]])
+
+    rest_df <- df %>%
+        filter.(!studlab %in% prim_studlabs)
+
+    if (!any(duplicated(rest_df$studlab))) {
+        if (nrow(rest_df) > 0) {
+            loop_out[[outc]] <- list(prim_df, rest_df)
+        }
+        else {
+            loop_out[[outc]] <- list(prim_df)
+        }
+    } else {
+        split_list <- split_multi_outc(rest_df)
+        loop_out[[outc]] <- c(list(prim_df), flatten(split_list))
+    }
+}
+
+
+identical(loop_out, loop_out_old)
+
+bench::mark(
+    df %>%
+        filter.(!studlab %in% prim_studlabs),
+    df[!studlab %in% prim_studlabs],
+    check = F
+)
+
+df %>%
+    filter.(!studlab %in% prim_studlabs)
+
+
+df[!studlab %in% prim_studlabs]
+
+prim_studlabs
+
+
+
+
+
+
+df[, outcome := NULL]
+
+df
+df
+
+
+df[-outcome]
+
+df %>% filter.(outcome == "eq5d")
+
+df["outcome" == "eq5d"]
+x <- 1:2
+y <- 1:2
+
+expand_grid.(x, y)
+
+expand_grid.(stuff = x, y)
+
+
+
 df <- data
-combs <- list(
+list_of_combos <- list(
     c("follow_up", "outcome"),
     c("intervention", "outcome"),
     c("intervention", "follow_up")
 )
 
-expand_grid(
-    var1 = unique(df[combs[[1]][1]]),
-    var2 = unique(df[combs[[1]][2]])
-)
+
+grid <- sel_grid
+
+
+# helper func
+helper <- function(var1, var2, val1, val2) {
+    if (nrow(df[get(var1) == val1 & get(var2) == val2]) == 0) {
+        grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+    }
+}
+
+
+### START FUNC
+
+df <- df %>%
+    select.(-outcome) %>%
+    rename.(
+        outcome = bin_outcome,
+        intervention = interv
+    )
+
+combo_grids <- list()
+for (i in seq_along(list_of_combos)) {
+    combo_grid <- expand_grid(
+        var1 = list_of_combos[[i]][1],
+        var2 = list_of_combos[[i]][2],
+        val1 = as.numeric(unique(df[[var1]])),
+        val2 = as.numeric(unique(df[[var2]]))
+    )
+    combo_grids[[i]] <- combo_grid
+}
+
+combo_grid <- rbindlist(combo_grids)
+
+combo_grid %>%
+    pwalk(helper)
+
+
+df[get("follow_up") == 12]
+
+
+
+
+remove_nulls <- function(df, grid, list_of_combos) {
+    df <- df %>%
+        select.(-outcome) %>% # ingen grund til at selecte?
+        rename.(
+            outcome = bin_outcome,
+            intervention = interv
+        )
+
+    combo_grids <- list()
+    for (i in seq_along(list_of_combos)) {
+        combo_grid <- expand.grid(
+            var1 = list_of_combos[[i]][1],
+            var2 = list_of_combos[[i]][2],
+            var1_vals = unique(df[[var1]]),
+            var2_vals = unique(df[[var2]])
+        )
+        combo_grids[[i]] <- combo_grid
+    }
+    combo_grid %>%
+        pmap(function(var1, var2, val1, val2) {
+            if (nrow(df[get(var1) == val1 & get(var2) == val2]) == 0) {
+                grid <- grid[!(get(var1) == val1 & get(var2) == val2)]
+            }
+        })
+
+    return(grid)
+}
+
+
 
 
 
