@@ -1,4 +1,56 @@
+### test expand_grid.
 
+df <- data
+
+outcome_type <- "qol"
+
+## FUNC START (DF, OUTCOME_TYPE)
+
+if (outcome_type == "qol") {
+    outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
+} else if (outcome_type == "func") {
+    outcome_vals <- c(unique(df$bin_outcome), 98:99) # 98: PROMS + CS,99 PROMS
+} else if (outcome_type == "bin") {
+    outcome_vals <- unique(df$bin_outcome)
+}
+
+# neer
+neer_vals <- unique(df$bin_neer)
+neer_vals <- neer_vals[neer_vals %in% 2:4]
+
+# outcome
+interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
+
+# create grid
+grid <- expand_grid.(
+    language = unique(df$bin_lang),
+    year = unique(df$bin_year),
+    design = unique(df$bin_design),
+    age = unique(df$bin_age),
+    neer_34part = unique(df$bin_34part),
+    toi = unique(df$bin_toi),
+    doctreat = unique(df$bin_doctreat),
+    loss_fu = unique(df$bin_loss_fu),
+    outcome = outcome_vals,
+    follow_up = c(unique(df$follow_up), 98:99), # 98: longest fu from each study, 99: periods of fu
+    fu_period = unique(df$bin_fu_period),
+    outcome_analysis = c(unique(df$bin_oa), 98), # 98: both types of oa
+    intervention = interv_vals,
+    neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
+    imputed = unique(df$bin_imputed),
+    ttfu = unique(df$bin_ttfu)
+)
+
+
+grid %>% mutate.(
+    across.(where(is.numeric), as.integer),
+    across.(where(is.character), as_factor)
+)
+
+
+
+
+### SPLIT SEL GRID
 sel_grid <- read_parquet(here("output", "sel_grid_qol.parquet"))
 dim(sel_grid)
 
