@@ -113,7 +113,7 @@ make_sel_grid <- function(df, outcome_type = NULL) {
     interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
 
     # create grid
-    grid <- expand_grid(
+    grid <- expand_grid.(
         language = unique(df$bin_lang),
         year = unique(df$bin_year),
         design = unique(df$bin_design),
@@ -131,11 +131,10 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         imputed = unique(df$bin_imputed),
         ttfu = unique(df$bin_ttfu)
     ) %>%
-        mutate(
-            across(where(is.numeric), as.integer),
-            across(where(is.character), as_factor)
-        ) %>%
-        as.data.table()
+        mutate.(
+            across.(where(is.numeric), as.integer),
+            across.(where(is.character), as_factor)
+        )
     return(grid)
 }
 
@@ -144,7 +143,7 @@ make_sel_grid <- function(df, outcome_type = NULL) {
 
 remove_nulls <- function(df, grid, list_of_combos) {
     df <- df %>%
-        select.(-outcome) %>% # ingen grund til at selecte?
+        select.(-outcome) %>%
         rename.(
             outcome = bin_outcome,
             intervention = interv

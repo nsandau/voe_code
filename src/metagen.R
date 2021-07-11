@@ -333,8 +333,7 @@ if (OUTCOME %in% c("func", "bin")) {
 cat("Starting subsets", "\n")
 if (DEV_RUN == TRUE) {
   sel_grid <- sel_grid %>%
-    slice_sample.(n = 30000) %>%
-    as.data.table()
+    slice_sample.(n = 30000)
 }
 
 plan(multicore, workers = cores)
@@ -375,7 +374,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 20)
+plan(multicore, workers = 18)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
