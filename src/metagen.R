@@ -388,9 +388,34 @@ cat("Results_df rows", nrow(results_df), "\n")
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_feather(results_df, here::here("output", str_c("results_df_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
+write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
 write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
 toc()
 
 
-## Combine results
+## merge results
+
+if (OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS) {
+  output_dir <- here("output")
+
+  df_paths <- output_dir %>%
+    list.files()
+
+  pvals_merged <- df_paths %>%
+    str_subset(OUTCOME) %>%
+    str_subset("pvals_") %>%
+    map_dfr(~ read_feather(file.path(output_dir, .x)))
+
+
+
+  results_merged <- df_paths %>%
+    str_subset(OUTCOME) %>%
+    str_subset("results_") %>%
+    map_dfr(~ read_feather(file.path(output_dir, .x)))
+
+
+
+
+  write_feather(results_merged, here::here("output", str_c("results_", OUTCOME, "_", "merged", ".feather")), version = "2.0")
+  write_feather(pvals_merged, here::here("output", str_c("pvals_", OUTCOME, "_", "merged", ".feather")), version = "2.0")
+}
