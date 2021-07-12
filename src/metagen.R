@@ -374,7 +374,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 20)
+plan(multisession, workers = 20)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
@@ -391,34 +391,3 @@ tic("Writing results ")
 write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")))
 write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")))
 toc()
-
-
-## merge results
-
-if (OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS) {
-  tic("Writing merged results")
-  output_dir <- here("output")
-
-  df_paths <- output_dir %>%
-    list.files()
-
-  pvals_merged <- df_paths %>%
-    str_subset(OUTCOME) %>%
-    str_subset("pvals_") %>%
-    map_dfr(~ read_feather(file.path(output_dir, .x)))
-
-  results_merged <- df_paths %>%
-    str_subset(OUTCOME) %>%
-    str_subset("results_") %>%
-    map_dfr(~ read_feather(file.path(output_dir, .x)))
-
-  write_feather(
-    results_merged,
-    here::here("output", str_c("results_", OUTCOME, "_", "merged", ".feather"))
-  )
-  write_feather(
-    pvals_merged,
-    here::here("output", str_c("pvals_", OUTCOME, "_", "merged", ".feather"))
-  )
-  toc()
-}

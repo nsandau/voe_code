@@ -8,6 +8,6 @@ sleep 30s
 sbatch slurm_job.sh $1 4
 sleep 30s
 sbatch slurm_job.sh $1 5
-sleep 5m
+sleep 30s
 sbatch slurm_job.sh $1 6
 
