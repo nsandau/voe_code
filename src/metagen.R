@@ -368,7 +368,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 15)
+plan(multicore, workers = 20)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
@@ -384,4 +384,7 @@ pvals <- results_df %>% gather_pvals()
 tic("Writing results ")
 write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")))
 write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")))
+toc()
+
+# runtime
 toc()
