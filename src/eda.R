@@ -1,4 +1,7 @@
 
+
+read_feather(here("output", "results_func_merged.feather"))
+
 # if OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS
 
 output_dir <- here("output")

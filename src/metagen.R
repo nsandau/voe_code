@@ -326,7 +326,7 @@ if (OUTCOME %in% c("func", "bin")) {
 }
 
 # tic("Writing sel_grid")
-# write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")), version = "2.0")
+# write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
 # toc()
 
 # Subset data -------------------------------------------------------------
@@ -352,7 +352,7 @@ cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets")
-# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".feather")), version = "2.0")
+# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".feather")))
 # toc()
 
 ###### split list to multi_out and dfs
@@ -369,7 +369,7 @@ cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets_final")
-# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".feather")), version = "2.0")
+# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".feather")))
 # toc()
 
 # Conduct metagen ---------------------------------------------------------
@@ -388,14 +388,15 @@ cat("Results_df rows", nrow(results_df), "\n")
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
-write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
+write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")))
+write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")))
 toc()
 
 
 ## merge results
 
 if (OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS) {
+  tic("Writing merged results")
   output_dir <- here("output")
 
   df_paths <- output_dir %>%
@@ -406,16 +407,18 @@ if (OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS) {
     str_subset("pvals_") %>%
     map_dfr(~ read_feather(file.path(output_dir, .x)))
 
-
-
   results_merged <- df_paths %>%
     str_subset(OUTCOME) %>%
     str_subset("results_") %>%
     map_dfr(~ read_feather(file.path(output_dir, .x)))
 
-
-
-
-  write_feather(results_merged, here::here("output", str_c("results_", OUTCOME, "_", "merged", ".feather")), version = "2.0")
-  write_feather(pvals_merged, here::here("output", str_c("pvals_", OUTCOME, "_", "merged", ".feather")), version = "2.0")
+  write_feather(
+    results_merged,
+    here::here("output", str_c("results_", OUTCOME, "_", "merged", ".feather"))
+  )
+  write_feather(
+    pvals_merged,
+    here::here("output", str_c("pvals_", OUTCOME, "_", "merged", ".feather"))
+  )
+  toc()
 }
