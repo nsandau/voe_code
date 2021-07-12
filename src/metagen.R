@@ -326,7 +326,7 @@ if (OUTCOME %in% c("func", "bin")) {
 }
 
 # tic("Writing sel_grid")
-# write_parquet(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".parquet")), version = "2.0")
+# write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")), version = "2.0")
 # toc()
 
 # Subset data -------------------------------------------------------------
@@ -352,7 +352,7 @@ cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets")
-# write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".parquet")), version = "2.0")
+# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".feather")), version = "2.0")
 # toc()
 
 ###### split list to multi_out and dfs
@@ -369,7 +369,7 @@ cat("Length of final subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets_final")
-# write_parquet(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".parquet")), version = "2.0")
+# write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".feather")), version = "2.0")
 # toc()
 
 # Conduct metagen ---------------------------------------------------------
@@ -388,8 +388,8 @@ cat("Results_df rows", nrow(results_df), "\n")
 pvals <- results_df %>% gather_pvals()
 
 tic("Writing results ")
-write_parquet(results_df, here::here("output", str_c("results_df_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
-write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
+write_feather(results_df, here::here("output", str_c("results_df_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
+write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")), version = "2.0")
 toc()
 
 
