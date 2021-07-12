@@ -3,40 +3,34 @@
 ## TODO:
 ## unit testing
 ## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
-## Fix paths when copying
 
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
 # sample_n: none smaller than min requirement (15)
 # time to follow-up: ingen under 12 mdr
 
-### ARGUMENTS
+# ARGUMENTS
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0) {
   stop("Need to supply outcome", call. = FALSE)
 }
-# OUTCOME ARGUMENT
+## OUTCOME ARGUMENT
 testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
 OUTCOME <- args[1]
 
-# SPLIT ARGUMENT
+## SPLIT ARGUMENT
 N_SPLITS <- 6
 testthat::expect_true(args[2] %in% as.character(1:N_SPLITS))
 SPLIT_NO <- as.integer(args[2])
 
 
-# if third argument given: conduct dev-run
+## DEV-RUN: if third argument given conduct dev-run
 if (is.na(args[3])) {
   DEV_RUN <- FALSE
 } else {
   DEV_RUN <- TRUE
 }
-
-BASE_PATH <- "/home/kmd592_ku_dk"
-ERDA_PATH <- file.path(BASE_PATH, "erda_mount")
-MODI_PATH <- file.path(BASE_PATH, "modi_mount")
-DATE <- format(Sys.time(), "%d-%m-%y_%H-%M")
 
 ##### LIBRARIES
 
