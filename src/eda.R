@@ -1,8 +1,30 @@
 
 # if OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS
 
+output_dir <- here("output")
+
+df_paths <- output_dir %>%
+    list.files()
+
+# skal lave en col der siger om det er fra provider eller ccg
+
+pvals_merged <- df_paths %>%
+    str_subset(OUTCOME) %>%
+    str_subset("pvals_") %>%
+    map_dfr(~ read_feather(file.path(output_dir, .x)))
 
 
+
+results_merged <- df_paths %>%
+    str_subset(OUTCOME) %>%
+    str_subset("results_") %>%
+    map_dfr(~ read_feather(file.path(output_dir, .x)))
+
+
+
+write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
+
+df
 
 ### test expand_grid.
 
