@@ -14,11 +14,13 @@ for (OUTCOME in c("bin", "func")) {
     pvals_merged <- df_paths %>%
         str_subset(OUTCOME) %>%
         str_subset("pvals_") %>%
+        str_subset("merged", negate = T) %>%
         future_map_dfr(~ read_feather(file.path(output_dir, .x)))
 
     results_merged <- df_paths %>%
         str_subset(OUTCOME) %>%
         str_subset("results_") %>%
+        str_subset("merged", negate = T) %>%
         future_map_dfr(~ read_feather(file.path(output_dir, .x)))
 
     write_feather(

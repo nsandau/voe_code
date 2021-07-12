@@ -1,4 +1,9 @@
 
+df_paths %>%
+    str_subset(OUTCOME) %>%
+    str_subset("pvals_") %>%
+    str_subset("merged", negate = T)
+
 
 read_feather(here("output", "results_func_merged.feather"))
 
