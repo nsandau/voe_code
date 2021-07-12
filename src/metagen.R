@@ -21,7 +21,7 @@ testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
 OUTCOME <- args[1]
 
 # SPLIT ARGUMENT
-N_SPLITS <- 4
+N_SPLITS <- 6
 testthat::expect_true(args[2] %in% as.character(1:N_SPLITS))
 SPLIT_NO <- as.integer(args[2])
 
@@ -374,7 +374,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 18)
+plan(multicore, workers = 20)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
@@ -391,3 +391,6 @@ tic("Writing results ")
 write_parquet(results_df, here::here("output", str_c("results_df_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
 write_parquet(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".parquet")), version = "2.0")
 toc()
+
+
+## Combine results

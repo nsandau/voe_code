@@ -1,3 +1,9 @@
+
+# if OUTCOME %in% c("func", "bin") & SPLIT_NO == N_SPLITS
+
+
+
+
 ### test expand_grid.
 
 df <- data
