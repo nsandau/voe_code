@@ -7,7 +7,6 @@
 ## Udgået:
 # zv: publ_status, databases, outcom_rep_as
 # sample_n: none smaller than min requirement (15)
-# time to follow-up: ingen under 12 mdr
 
 # ARGUMENTS
 args <- commandArgs(trailingOnly = TRUE)
@@ -74,16 +73,22 @@ conflict_prefer("filter", "dplyr", quiet = T)
 
 
 # IMPORT ------------------------------------------------------------------
-data_extract <- read_excel(here("data", "p3 data extract.xlsx")) %>%
-  clean_names() %>%
-  mutate(
-    across(where(is.character), str_to_lower),
-    publ_date = as_date(publ_date)
-  ) %>%
-  rename(studlab = study_identifier) %>%
-  select(-notes)
 
-# write_rds(data_extract, here("data", data_extract.rds))
+# if running on local import directly from xlsx else import from
+
+if (cores < 20) {
+  read_excel("/home/nicolai/OneDrive/Forskning/Phd/3 Simulation/02 - Data extract/outcome extract/p3 data extract.xlsx") %>%
+    clean_names() %>%
+    mutate(
+      across(where(is.character), str_to_lower),
+      publ_date = as_date(publ_date)
+    ) %>%
+    rename(studlab = study_identifier) %>%
+    select(-notes) %>%
+    write_rds("data/data_extract.rds")
+}
+
+data_extract <- read_rds(here("data", "data_extract.rds"))
 
 # STRINGS FOR FILTERING ---------------------------------------------------
 
@@ -106,21 +111,25 @@ qol_outcomes <- c(
   "vr12"
 )
 bin_outcomes <- c(
+  #  "rct",
+  #  "instability",
+  #  "malunion",
+  #  "stiffness"
   "revision",
   "complications",
   "displacement",
   "impingement",
-  "rct",
-  "instability",
   "failure",
   "metalwork",
   "nerveinj",
   "infection",
   "avn",
-  "malunion",
-  "nonunion",
-  "stiffness"
+  "nonunion"
 )
+
+# FOR NOW REMOVE BIN OUTCOMES RCT, INSTABILITY, MALUNION, STIFFNESS
+data_extract <- data_extract %>% select(-starts_with(c("rct", "instability", "malunion", "stiffness")))
+
 
 cont_outcomes <- c(func_outcomes, qol_outcomes)
 
@@ -134,24 +143,25 @@ OUTCOME_VARS <- if (OUTCOME == "qol") {
 
 OUTCOME_DESELECT <- setdiff(c(func_outcomes, qol_outcomes, bin_outcomes), OUTCOME_VARS)
 
+
 # REMOVE COLS WITH ZERO VARIANCE--------------------------------------
-char_col <- data_extract %>%
-  select(-starts_with(cont_outcomes), -starts_with(bin_outcomes)) %>%
-  names()
+# char_col <- data_extract %>%
+#  select(-starts_with(cont_outcomes), -starts_with(bin_outcomes)) %>%
+#  names()
 
-zv_cols <- data_extract %>%
-  select(all_of(char_col)) %>%
-  map_df(~ tibble(
-    class = class(.),
-    n_dist = n_distinct(.),
-    value = toString(unique(.)),
-  ), .id = "col_name") %>%
-  filter(n_dist == 1) %>%
-  pull(col_name)
+# zv_cols <- data_extract %>%
+#  select(all_of(char_col)) %>%
+#  map_df(~ tibble(
+#    class = class(.),
+#    n_dist = n_distinct(.),
+#    value = toString(unique(.)),
+#  ), .id = "col_name") %>%
+#  filter(n_dist == 1) %>%
+#  pull(col_name)
 
-data_extract <- data_extract %>% select(-all_of(zv_cols))
+# data_extract <- data_extract %>% select(-all_of(zv_cols))
 
-# CALCULATE TOTAL N AND NEER --------------------------------
+# CALCULATE TOTAL N AND e --------------------------------
 data_extract <- data_extract %>%
   left_join(data_extract %>%
     group_by(studlab) %>%
@@ -203,7 +213,12 @@ data_cont <- data_extract %>%
     ),
     by = "studlab"
   ) %>%
+  # correct imputed outcome to specific measures and timepoints
   mutate(
+    imputed_outcome = case_when(
+      str_detect(imputed_vars, outcome) & follow_up == imputed_timepoint ~ imputed_outcome,
+      TRUE ~ "no"
+    ),
     follow_up = as.integer(follow_up),
     outcome = as_factor(outcome),
     interv = as_factor(interv)

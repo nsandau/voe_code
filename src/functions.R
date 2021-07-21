@@ -52,7 +52,21 @@ make_binary <- function(df, outcome) {
                 str_detect(imputed_outcome, "yes|wrong") & !str_detect(imputed_vars, as.character(outcome)) ~ 1,
                 imputed_outcome == "yes" & str_detect(imputed_vars, as.character(outcome)) ~ 2,
                 imputed_outcome == "wrong" & str_detect(imputed_vars, as.character(outcome)) ~ 3
-            )
+            ),
+            rob_evals = case_when(
+                rob_tool == "rob2" & rob2_overall == "some concern" ~ "moderate",
+                rob_tool == "rob2" & rob2_overall != "some concern" ~ rob2_overall,
+                rob_tool == "rob" & rob_overall == "unclear" ~ "moderate",
+                rob_tool == "rob" & rob_overall != "unclear" ~ rob_overall,
+                rob_tool == "minors" & minors_total <= 8 ~ "high",
+                rob_tool == "minors" & between(minors_total, 9, 15) ~ "moderate",
+                rob_tool == "minors" & minors_total >= 16 ~ "low",
+                rob_tool == "nos" & nos_total <= 2 ~ "high",
+                rob_tool == "nos" & between(nos_total, 3, 4) ~ "moderate",
+                rob_tool == "nos" & nos_total >= 5 ~ "low",
+                TRUE ~ "high" # One study has NA. Setting ROB to high ensures it gets included "last"
+            ),
+            bin_rob = factor(rob_evals, ordered = TRUE, levels = c("low", "moderate", "high"))
         ) %>%
         group_by(studlab, outcome) %>%
         mutate(
@@ -129,7 +143,8 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         intervention = interv_vals,
         neer = c(neer_vals, 98, 99), # 98: 3-part + 4-part, 99 ALL
         imputed = unique(df$bin_imputed),
-        ttfu = unique(df$bin_ttfu)
+        ttfu = unique(df$bin_ttfu),
+        rob = unique(df$bin_rob)
     ) %>%
         mutate.(
             across.(where(is.numeric), as.integer),
@@ -187,8 +202,7 @@ split_multi_outc <- function(df) {
         if (!any(duplicated(rest_df$studlab))) {
             if (nrow(rest_df) > 0) {
                 loop_out[[outc]] <- list(prim_df, rest_df)
-            }
-            else {
+            } else {
                 loop_out[[outc]] <- list(prim_df)
             }
         } else {
@@ -217,7 +231,8 @@ do_subset <- function(df,
                       intervention,
                       neer,
                       imputed,
-                      ttfu) {
+                      ttfu,
+                      rob) {
     # Simple selection vars
     sel_lang <- 1:language
     sel_year <- 1:year
@@ -229,15 +244,14 @@ do_subset <- function(df,
     sel_loss_fu <- 1:loss_fu
     sel_imputed <- 1:imputed
     sel_ttfu <- 1:ttfu
+    sel_rob <- 1:rob
 
     # outcomes
     if (!outcome %in% c(98, 99)) { # select specific outcomes
         sel_outcome <- outcome
-    }
-    else if (outcome == 98) { # select all outcomes
+    } else if (outcome == 98) { # select all outcomes
         sel_outcome <- unique(df$bin_outcome)
-    }
-    else if (outcome == 99) {
+    } else if (outcome == 99) {
         unq <- unique(df$bin_outcome)
         sel_outcome <- unq[!unq %in% 1] # remove CS from proms
     }
@@ -263,8 +277,7 @@ do_subset <- function(df,
     # outcome analysis
     if (outcome_analysis == 98) {
         sel_oa <- unique(df$bin_oa)
-    }
-    else {
+    } else {
         sel_oa <- outcome_analysis
     }
 
@@ -282,11 +295,9 @@ do_subset <- function(df,
     # neer
     if (!neer %in% c(98, 99)) { # select specific neer type
         sel_neer <- neer
-    }
-    else if (neer == 98) { # select 3 and 4 parts
+    } else if (neer == 98) { # select 3 and 4 parts
         sel_neer <- c(3, 4)
-    }
-    else if (neer == 99) { # select all neer types
+    } else if (neer == 99) { # select all neer types
         sel_neer <- unique(df$bin_neer)
     }
 
@@ -309,7 +320,8 @@ do_subset <- function(df,
             interv %in% sel_interv &
             bin_neer %in% sel_neer &
             bin_imputed %in% sel_imputed &
-            bin_ttfu %in% sel_ttfu
+            bin_ttfu %in% sel_ttfu &
+            bin_rob %in% sel_rob
     ]
 
     if (nrow(subset) == 0) {
@@ -318,12 +330,10 @@ do_subset <- function(df,
     if (any(duplicated(subset[["studlab"]]))) {
         subset <- split_multi_outc(subset) %>%
             map(rbindlist)
-    }
-    else {
+    } else {
         return(subset)
     }
 }
-
 
 
 # do metagen --------------------------------------------------------------
@@ -340,8 +350,7 @@ do_meta <- function(data, outcome) {
             comb.random = TRUE,
             comb.fixed = TRUE
         )
-    }
-    else if (outcome == "bin") {
+    } else if (outcome == "bin") {
         metabin(
             event.e = int_e,
             n.e = int_n,
