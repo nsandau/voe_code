@@ -76,10 +76,10 @@ if (cores < 20) {
     ) %>%
     rename(studlab = study_identifier) %>%
     select(-notes) %>%
-    write_rds("data/data_extract.rds")
+    write_rds("data/data_extract.rd") # named rd so gitignore doesnt catch it and the other rds files doesnt get uploaded
 }
 
-data_extract <- read_rds(here("data", "data_extract.rds"))
+data_extract <- read_rds(here("data", "data_extract.rd"))
 
 # STRINGS FOR FILTERING ---------------------------------------------------
 
