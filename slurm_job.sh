@@ -6,6 +6,6 @@
 #SBATCH --exclusive
 #SBATCH --mail-type=FAIL,END          # send email on start, end and fault
 #SBATCH --mail-user=nclibz@gmail.com
-#SBATCH --partition=modi_short  # modi_devel 15min, modi_short 48h, modi_long 7d 
+#SBATCH --partition=modi_devel  # modi_devel 15min, modi_short 48h, modi_long 7d 
 
 singularity exec docker://nclibz/voecode:latest Rscript ./src/metagen.R $1 $2 $3

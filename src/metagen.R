@@ -1,14 +1,5 @@
-### NOTER
 
-## TODO:
-## unit testing
-## når laver imputation - i make_bin tage højde for hvilket outcome der er imputed
-
-## Udgået:
-# zv: publ_status, databases, outcom_rep_as
-# sample_n: none smaller than min requirement (15)
-
-# ARGUMENTS
+# ARGUMENTS 1: outcome, 2: split_number, 3: Dev_run
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0) {
