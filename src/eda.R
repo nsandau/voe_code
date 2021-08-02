@@ -1,4 +1,17 @@
 
+
+
+list_of_cols <- list(
+    intervention = c(1, 2, 3, 4),
+    year = c(1, 2, 3, 4)
+)
+
+expand_grid.(!!!list_of_cols)
+
+
+
+
+
 ### MERGE BINS
 
 bin_bin <- data_cont %>%
