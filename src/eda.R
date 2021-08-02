@@ -1,4 +1,25 @@
 
+### MERGE BINS
+
+bin_bin <- data_cont %>%
+    filter(outcome %in% OUTCOME_VARS) %>%
+    make_binary(outcome = OUTCOME)
+
+bin_qol %>% pull(outcome)
+bin_func %>% pull(outcome)
+bin_bin %>% pull(outcome)
+
+
+bin_all <- bin_qol %>%
+    bind_rows(bin_func) %>%
+    bind_rows(bin_bin)
+
+
+write_rds(bin_all, "/home/nicolai/OneDrive/Forskning/Phd/3 Simulation/04 - manus/data/data_bin_all.rds")
+
+
+
+
 
 data_extract %>%
     mutate(
@@ -19,6 +40,9 @@ data_extract %>%
     ) %>%
     select(rob_tool, starts_with(c("rob", "minors", "nos")), bin_rob, bin_rob_int) %>%
     View()
+
+
+
 
 
 

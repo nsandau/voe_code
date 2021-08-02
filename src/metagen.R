@@ -62,7 +62,6 @@ conflict_prefer("between", "dplyr", quiet = TRUE)
 conflict_prefer("year", "lubridate", quiet = TRUE)
 conflict_prefer("filter", "dplyr", quiet = T)
 
-
 # IMPORT ------------------------------------------------------------------
 
 # if running on local import directly from xlsx else import from
