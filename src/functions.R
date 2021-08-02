@@ -110,7 +110,11 @@ make_binary <- function(df, outcome) {
 
 ### CREATE SELECTION GRID ------------------------------------------------------------
 
-make_sel_grid <- function(df, outcome_type = NULL) {
+make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
+    # check args
+    # testthat::expect_true(outcome_type %in% c("qol", "func", "bin"))
+    # testthat::expect_true(protocol %in% c("handoll", "beks", "skou", NULL))
+
     if (outcome_type == "qol") {
         outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
     } else if (outcome_type == "func") {
@@ -126,8 +130,8 @@ make_sel_grid <- function(df, outcome_type = NULL) {
     # outcome
     interv_vals <- as.factor(c(levels(fct_drop(df$interv)), "plate_tb", "artro", "all"))
 
-    # create grid
-    grid <- expand_grid.(
+    # create grid_values
+    grid_vals <- list(
         language = unique(df$bin_lang),
         year = unique(df$bin_year),
         design = unique(df$bin_design),
@@ -145,11 +149,21 @@ make_sel_grid <- function(df, outcome_type = NULL) {
         imputed = unique(df$bin_imputed),
         ttfu = unique(df$bin_ttfu),
         rob = unique(df$bin_rob)
-    ) %>%
+    )
+
+    #    if (protocol == "handoll") {
+
+    #    }
+
+    grid <- expand_grid.(!!!grid_vals) %>%
         mutate.(
             across.(where(is.numeric), as.integer),
             across.(where(is.character), as_factor)
         )
+
+
+
+
     return(grid)
 }
 
