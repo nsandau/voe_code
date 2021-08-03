@@ -1,7 +1,30 @@
 
+data_extract <- read_rds("data/data_extract.rd")
+
+data %>%
+    select(outcome, bin_outcome) %>%
+    distinct()
 
 
-list_of_cols <- list(
+data_cont %>%
+    group_by(studlab, outcome) %>%
+    mutate(
+        fu_diff = abs(follow_up - 12),
+        bin_fu_longest = case_when(
+            fu_diff == min(fu_diff) ~ 1,
+            TRUE ~ 0
+        )
+    ) %>%
+    select(studlab, outcome, follow_up, fu_diff, bin_fu_longest)
+
+test %>% select(studlab, follow_up, bin_fu_period, interv)
+
+unique(test$bin_lang)
+
+
+filter(test, bin_lang == 1)
+
+list_of_cols() <- list(
     intervention = c(1, 2, 3, 4),
     year = c(1, 2, 3, 4)
 )
@@ -9,8 +32,13 @@ list_of_cols <- list(
 expand_grid.(!!!list_of_cols)
 
 
+list_of_cols[["intervention"]] <- c(1, 1)
 
+list_of_cols
 
+expand_grid.(!!!list_of_cols) %>% distinct.()
+
+unique(c(1, max(data$bin_lang)))
 
 ### MERGE BINS
 
