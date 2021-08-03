@@ -56,6 +56,7 @@ source(here("src", "functions.R"))
 cores <- future::availableCores()
 # ram <- benchmarkme::get_ram()
 cat("Outcome is:", OUTCOME, "\n")
+cat("PROTOCOL IS:", PROTOCOL, "\n")
 cat("DEV_RUN:", DEV_RUN, "\n")
 cat("SPLIT_NO:", SPLIT_NO, "\n")
 cat("Using", cores, "cores", "\n")
@@ -385,10 +386,17 @@ toc()
 
 
 ## EXTRACT RESULTS ---------------------------------------------------
-results_df <- results %>% extract_meta(outcome = OUTCOME)
+results_df <- results %>%
+  extract_meta(outcome = OUTCOME) %>%
+  mutate(protocol = PROTOCOL, outcome = OUTCOME)
+
 cat("Results_df rows", nrow(results_df), "\n")
 
-pvals <- results_df %>% gather_pvals()
+pvals <- results_df %>%
+  gather_pvals() %>%
+  mutate(protocol = PROTOCOL, outcome = OUTCOME)
+
+### RECODE PROTOCOL SKOU ONLY USES RANDOM EFFECTS
 
 if (PROTOCOL == "skou") {
   results_df <- results_df %>% select(-contains("fixed"))
