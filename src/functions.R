@@ -1,11 +1,14 @@
 
 # MAKE BINARYS ----------------------------------------
 
-make_binary <- function(df, outcome) {
+make_binary <- function(df, outcome, protocol) {
     df_bin <- df %>%
         group_by(studlab) %>%
         mutate(
-            bin_lang = if_else(language == "english", 1, 2),
+            bin_lang = case_when(
+                language == "english" ~ 1,
+                TRUE ~ 2
+            ),
             bin_year = case_when(
                 year(publ_date) > 1995 ~ 1,
                 year(publ_date) > 1990 ~ 2,
@@ -104,6 +107,64 @@ make_binary <- function(df, outcome) {
         )
     }
 
+    ### RECODE TO PROTOCOLS
+    if (protocol == "beks") {
+        df_bin <- df_bin %>%
+            mutate(
+                bin_lang = case_when( # english, german or dutch
+                    language %in% c("english", "german", "dutch") ~ 1
+                ),
+                bin_year = case_when( # studies after 2007, all studies
+                    year(publ_date) > 2007 ~ 1,
+                    TRUE ~ 2
+                ),
+                bin_design = case_when( # rct, rct + any NRSI
+                    design == "rct" ~ 1,
+                    TRUE ~ 2
+                )
+            ) %>%
+            group_by(studlab, outcome) %>%
+            mutate(
+                bin_fu_period = case_when(
+                    between(follow_up, 0, 12) ~ 1,
+                    TRUE ~ 2
+                ),
+            ) %>%
+            group_by(studlab, outcome, bin_fu_period) %>%
+            mutate(
+                bin_fu_period_long = case_when(
+                    follow_up == max(follow_up) ~ 1,
+                    TRUE ~ 0
+                )
+            ) %>%
+            ungroup() %>%
+            filter(interv != "k-wires") # excludes exfix in protocol
+    }
+
+    if (protocol == "skou") {
+        df_bin <- df_bin %>%
+            mutate(
+                bin_year = case_when(
+                    year(publ_date) > 2000 ~ 1,
+                    TRUE ~ 2
+                ), ,
+                bin_design = case_when( # rct, rct + any NRSI
+                    design == "rct" ~ 1,
+                    TRUE ~ 2
+                )
+            ) %>%
+            group_by(studlab, outcome) %>%
+            mutate(
+                fu_diff = abs(follow_up - 12),
+                bin_fu_longest = case_when(
+                    fu_diff == min(fu_diff) ~ 1,
+                    TRUE ~ 0
+                )
+            ) %>%
+            ungroup()
+    }
+
+
     return(df_bin)
 }
 
@@ -111,10 +172,6 @@ make_binary <- function(df, outcome) {
 ### CREATE SELECTION GRID ------------------------------------------------------------
 
 make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
-    # check args
-    # testthat::expect_true(outcome_type %in% c("qol", "func", "bin"))
-    # testthat::expect_true(protocol %in% c("handoll", "beks", "skou", NULL))
-
     if (outcome_type == "qol") {
         outcome_vals <- c(unique(df$bin_outcome), 98) # 98: QoLs
     } else if (outcome_type == "func") {
@@ -151,17 +208,51 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
         rob = unique(df$bin_rob)
     )
 
-    #    if (protocol == "handoll") {
+    ## RECODE GRID_VALS TO PROTOCOL VALUES
 
-    #    }
+    if (protocol == "handoll") {
+        grid_vals[["design"]] <- 1 # only rct
+        grid_vals[["age"]] <- 5 # > 18 years
+    }
 
+    if (protocol == "beks") {
+        grid_vals[["language"]] <- 1 # english dutch or german
+        grid_vals[["age"]] <- 5 # > 18 years
+        grid_vals[["follow_up"]] <- 99 # only use bin_periods (<12 >12 months)
+        grid_vals[["rob"]] <- c(1, 3) # only low risk of bias, or all
+        grid_vals[["imputed"]] <- 2 # studies not need imputation, and studies with imputed vals from hanbook
+
+
+        if (outcome_type == "bin") {
+            grid_vals[["outcome"]] <- c(1, 3, 6, 7)
+        } # revisions, displacement, avn, nonunion}
+    }
+
+
+
+    if (protocol == "skou") {
+        grid_vals[["language"]] <- 2
+        grid_vals[["age"]] <- 5 # > 18 years
+        grid_vals[["imputed"]] <- 2 # studies not need imputation, and studies with imputed vals from hanbook
+
+        if (outcome %in% c("func", "qol")) {
+            grid_vals[["year"]] <- 2 # all studies regardless of publ_year
+            grid_vals[["design"]] <- 1 # only rct
+            grid_vals[["follow_up"]] <- c(unique(df$follow_up), 98) # unique vals together or val closest to 12 mths - bin_fu_longest recoded
+        }
+        if (outcome == "bin") {
+            grid_vals[["year"]] <- 1 # only studies published after 2000
+            grid_vals[["design"]] <- 2 # RCT + any type of NRSI
+            grid_vals[["follow_up"]] <- 98 # only val closest to 12 mths bin_fu_long recoded
+        }
+    }
+
+    ### CREATE GRID
     grid <- expand_grid.(!!!grid_vals) %>%
         mutate.(
             across.(where(is.numeric), as.integer),
             across.(where(is.character), as_factor)
         )
-
-
 
 
     return(grid)
@@ -283,7 +374,7 @@ do_subset <- function(df,
         sel_fu_period_long <- c(0, 1) # select all
     } else if (follow_up == 99) {
         sel_follow_up <- unique(df$follow_up) # select all fus
-        sel_fu_longest <- c(0, 1) # select only longest
+        sel_fu_longest <- c(0, 1) # select all
         sel_fu_period <- fu_period # select specific period
         sel_fu_period_long <- 1 # select longest fu in each period
     }
@@ -405,7 +496,7 @@ extract_meta <- function(data, outcome) {
             k = map_dbl(data, "k"),
             studlab = map_chr(data, ~ str_flatten(.x$studlab, collapse = " "))
         )
-    if (outcome == "bin") {
+    if (outcome == "bin") { # backconvert te
         res <- res %>%
             filter(k != 0) %>%
             mutate(

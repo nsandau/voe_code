@@ -1,13 +1,13 @@
 #!/bin/bash
-sbatch slurm_job.sh $1 1
+sbatch slurm_job.sh $1 $2 1
 sleep 5s
-sbatch slurm_job.sh $1 2
+sbatch slurm_job.sh $1 $2 2
 sleep 5s
-sbatch slurm_job.sh $1 3
+sbatch slurm_job.sh $1 $2 3
 sleep 5s
-sbatch slurm_job.sh $1 4
+sbatch slurm_job.sh $1 $2 4
 sleep 5s
-sbatch slurm_job.sh $1 5
+sbatch slurm_job.sh $1 $2 5
 sleep 5s
-sbatch slurm_job.sh $1 6
+sbatch slurm_job.sh $1 $2 6
 

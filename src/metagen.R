@@ -5,18 +5,22 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) {
   stop("Need to supply outcome", call. = FALSE)
 }
-## OUTCOME ARGUMENT
+## ARG 1: OUTCOME
 testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
 OUTCOME <- args[1]
 
-## SPLIT ARGUMENT
+## ARG 2: PROTOCOL
+PROTOCOL <- args[2]
+testthat::expect_true(protocol %in% c("handoll", "beks", "skou", "none"))
+
+## ARG 3: SPLIT
 N_SPLITS <- 6
-testthat::expect_true(args[2] %in% as.character(1:N_SPLITS))
-SPLIT_NO <- as.integer(args[2])
+testthat::expect_true(args[3] %in% as.character(1:N_SPLITS))
+SPLIT_NO <- as.integer(args[3])
 
 
-## DEV-RUN: if third argument given conduct dev-run
-if (is.na(args[3])) {
+## ARG 4: DEV-RUN: if any given conduct dev-run
+if (is.na(args[4])) {
   DEV_RUN <- FALSE
 } else {
   DEV_RUN <- TRUE
@@ -269,7 +273,7 @@ if (OUTCOME %in% c("qol", "func")) {
 
 data <- data_cont %>%
   filter(outcome %in% OUTCOME_VARS) %>%
-  make_binary(outcome = OUTCOME) %>%
+  make_binary(outcome = OUTCOME, protocol = PROTOCOL) %>%
   select(studlab, interv, outcome, follow_up, all_of(EFFECT_SIZE_COLS), starts_with("bin_")) %>%
   as.data.table()
 
@@ -285,7 +289,7 @@ cat("Creating selection grid ", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
-  make_sel_grid(outcome_type = OUTCOME)
+  make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL)
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
@@ -386,10 +390,15 @@ cat("Results_df rows", nrow(results_df), "\n")
 
 pvals <- results_df %>% gather_pvals()
 
+if (PROTOCOL == "skou") {
+  results_df <- results_df %>% select(-contains("fixed"))
+  pvals <- pvals %>% filter(method != "fixed")
+}
+
 tic("Writing results ")
-write_feather(results_df, here::here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, ".feather")))
-write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, ".feather")))
+write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
+write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
 toc()
 
-# runtime
+# total runtime
 toc()
