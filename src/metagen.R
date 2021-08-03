@@ -314,7 +314,7 @@ nrow_diff <- nrow_before - nrow_after
 cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
 
 
-if (OUTCOME %in% c("func", "bin")) {
+if (OUTCOME %in% c("func", "bin") & PROTOCOL == "none") {
   cat("Splitting sel_grid", "\n")
   part <- floor(nrow(sel_grid) / N_SPLITS)
 

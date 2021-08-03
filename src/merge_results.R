@@ -23,7 +23,7 @@ results_merged <- df_paths %>%
 
 write_feather(
     results_merged,
-    here::here("output", str_c("results_", "_", "merged", ".feather"))
+    here::here("output", str_c("results_", "merged", ".feather"))
 )
 write_feather(
     pvals_merged,
