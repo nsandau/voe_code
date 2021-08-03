@@ -11,7 +11,7 @@ OUTCOME <- args[1]
 
 ## ARG 2: PROTOCOL
 PROTOCOL <- args[2]
-testthat::expect_true(protocol %in% c("handoll", "beks", "skou", "none"))
+testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none"))
 
 ## ARG 3: SPLIT
 N_SPLITS <- 6
