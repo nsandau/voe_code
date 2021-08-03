@@ -403,6 +403,8 @@ if (PROTOCOL == "skou") {
   pvals <- pvals %>% filter(method != "fixed")
 }
 
+### WRITE RESULTS
+
 tic("Writing results ")
 write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
 write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
