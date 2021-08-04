@@ -1,56 +1,55 @@
 #!/bin/bash
 
-## FUNC NO PROTOCOL
-sbatch slurm_job.sh func none 1
+# FUNC 
+## NO PROTOCOL
+for number in 1 2 3 4 5 6
+do
+sbatch slurm_job.sh func none $number
 sleep 3s
-sbatch slurm_job.sh func none 2
-sleep 3s
-sbatch slurm_job.sh func none 3
-sleep 3s
-sbatch slurm_job.sh func none 4
-sleep 3s
-sbatch slurm_job.sh func none 5
-sleep 3s
-sbatch slurm_job.sh func none 6
-sleep 3s
+done
 
-## FUNC WITH PROTOCOLS 
-sbatch slurm_job.sh func beks 1
+## HANDOLL SPLIT
+for number in 1 2 3 4 5 6
+do
+sbatch slurm_job.sh func handoll $number
 sleep 3s
-sbatch slurm_job.sh func handoll 1
-sleep 3s
-sbatch slurm_job.sh func skou 1
-sleep 3s
+done
 
-## BIN NO PROTOCOL
-sbatch slurm_job.sh bin none 1
+## WITH PROTOCOLS 
+for protocol in beks skou
+do
+sbatch slurm_job.sh func $protocol 1
 sleep 3s
-sbatch slurm_job.sh bin none 2
-sleep 3s
-sbatch slurm_job.sh bin none 3
-sleep 3s
-sbatch slurm_job.sh bin none 4
-sleep 3s
-sbatch slurm_job.sh bin none 5
-sleep 3s
-sbatch slurm_job.sh bin none 6
+done
 
-## BIN WITH PROTOCOLS
-sbatch slurm_job.sh bin beks 1
+# BIN 
+## NO PROTOCOL
+for number in 1 2 3 4 5 6
+do
+sbatch slurm_job.sh bin none $number
 sleep 3s
-sbatch slurm_job.sh bin handoll 1
-sleep 3s
-sbatch slurm_job.sh bin skou 1
-sleep 3s
+done
 
-## ALL QOLS
-sbatch slurm_job.sh qol none 1
+## Handoll split
+for number in 1 2 3 4 5 6
+do
+sbatch slurm_job.sh bin handoll $number
 sleep 3s
-sbatch slurm_job.sh qol beks 1
+done
+
+## WITH PROTOCOLS
+for protocol in beks skou
+do
+sbatch slurm_job.sh bin $protocol 1
 sleep 3s
-sbatch slurm_job.sh qol handoll 1
+done
+
+# QOL 
+## ALL # beks doesnt include qol
+for protocol in none handoll skou
+do
+sbatch slurm_job.sh qol $protocol 1
 sleep 3s
-sbatch slurm_job.sh qol skou 1
-sleep 3s
+done
 
 

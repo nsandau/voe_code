@@ -286,6 +286,9 @@ if (DEV_RUN == TRUE) {
     as.data.table()
 }
 
+
+
+
 cat("Creating selection grid ", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tictoc::tic("Selection grid")
@@ -293,6 +296,24 @@ sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL)
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
+
+
+if (OUTCOME %in% c("func", "bin") & PROTOCOL %in% c("none", "handoll")) {
+  cat("Splitting sel_grid", "\n")
+  part <- floor(nrow(sel_grid) / N_SPLITS)
+
+  start <- ((SPLIT_NO - 1) * part + 1)
+  stop <- (SPLIT_NO * part)
+
+  if (SPLIT_NO == N_SPLITS) {
+    stop <- nrow(sel_grid)
+  }
+
+  sel_grid <- sel_grid[start:stop, ]
+  cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
+}
+
 
 # remove nulls
 combs <- list(
@@ -312,22 +333,6 @@ nrow_after <- nrow(sel_grid)
 cat("Rows after removal of nulls:", nrow_after, "\n")
 nrow_diff <- nrow_before - nrow_after
 cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
-
-
-if (OUTCOME %in% c("func", "bin") & PROTOCOL == "none") {
-  cat("Splitting sel_grid", "\n")
-  part <- floor(nrow(sel_grid) / N_SPLITS)
-
-  start <- ((SPLIT_NO - 1) * part + 1)
-  stop <- (SPLIT_NO * part)
-
-  if (SPLIT_NO == N_SPLITS) {
-    stop <- nrow(sel_grid)
-  }
-
-  sel_grid <- sel_grid[start:stop, ]
-  cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
-}
 
 # tic("Writing sel_grid")
 # write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
