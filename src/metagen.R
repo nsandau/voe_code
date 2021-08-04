@@ -286,9 +286,6 @@ if (DEV_RUN == TRUE) {
     as.data.table()
 }
 
-
-
-
 cat("Creating selection grid ", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tictoc::tic("Selection grid")
@@ -313,6 +310,7 @@ if (OUTCOME %in% c("func", "bin") & PROTOCOL %in% c("none", "handoll")) {
   sel_grid <- sel_grid[start:stop, ]
   cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
 }
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
 # remove nulls
@@ -343,6 +341,14 @@ cat("Starting subsets", "\n")
 if (DEV_RUN == TRUE) {
   sel_grid <- sel_grid %>%
     slice_sample.(n = 30000)
+}
+
+# reduce cores if sel_grid is too large
+mem_usage <- mem_used() / 1024 / 1024
+
+if (mem_usage > 8000) {
+  cat("Reducing no of cores", "\n")
+  cores <- floor(0.8 * cores)
 }
 
 plan(multicore, workers = cores)
@@ -412,7 +418,8 @@ if (PROTOCOL == "skou") {
 
 tic("Writing results ")
 write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
-write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
+
+# write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
 toc()
 
 # total runtime
