@@ -1,3 +1,37 @@
+library(tidyverse)
+sel_grid <- read_rds("output/sel_grid_qol.rds")
+OUTCOME <- "func"
+PROTOCOL <- "none"
+SPLIT_NO <- 1
+N_SPLITS <- 6
+
+splits <- list()
+
+for (SPLIT_NO in 1:6) {
+    sel_grid <- read_rds("output/sel_grid_qol.rds")
+    if (OUTCOME %in% c("func", "bin") & PROTOCOL %in% c("none", "handoll")) {
+        cat("Splitting sel_grid", "\n")
+        part <- floor(nrow(sel_grid) / N_SPLITS)
+
+        start <- ((SPLIT_NO - 1) * part + 1)
+        stop <- (SPLIT_NO * part)
+
+        if (SPLIT_NO == N_SPLITS) {
+            stop <- nrow(sel_grid)
+        }
+
+        sel_grid <- sel_grid[start:stop, ]
+        cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
+        splits[[SPLIT_NO]] <- sel_grid
+    }
+}
+
+df <- bind_rows(splits)
+
+
+testthat::expect_equal(df, sel_grid)
+
+
 
 data_extract <- read_rds("data/data_extract.rd")
 

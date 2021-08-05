@@ -14,7 +14,7 @@ PROTOCOL <- args[2]
 testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none"))
 
 ## ARG 3: SPLIT
-N_SPLITS <- 6
+N_SPLITS <- 8
 testthat::expect_true(args[3] %in% as.character(1:N_SPLITS))
 SPLIT_NO <- as.integer(args[3])
 
@@ -293,7 +293,6 @@ sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL)
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
 
 
 if (OUTCOME %in% c("func", "bin") & PROTOCOL %in% c("none", "handoll")) {
