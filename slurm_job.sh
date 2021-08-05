@@ -8,4 +8,4 @@
 #SBATCH --mail-user=nclibz@gmail.com
 #SBATCH --partition=modi_short  # modi_devel 15min, modi_short 48h, modi_long 7d 
 
-singularity exec docker://nclibz/voecode:conda Rscript ./src/metagen.R $1 $2 $3 $4
+singularity exec library://nclibz/default/image:latest Rscript ./src/metagen.R $1 $2 $3 $4
