@@ -4,7 +4,8 @@ pkgs <- c(
     "tictoc",
     "here",
     "furrr",
-    "tidytable"
+    "tidytable",
+    "data.table"
 )
 
 purrr::walk(pkgs, ~ library(.x, character.only = T, quietly = T))
