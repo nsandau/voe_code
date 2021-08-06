@@ -113,7 +113,7 @@ bin_outcomes <- c(
   "revision",
   "complications",
   "displacement",
-  "impingement",
+  # "impingement",
   "failure",
   "metalwork",
   "nerveinj",
@@ -396,7 +396,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 20)
+plan(multicore, workers = 15)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
