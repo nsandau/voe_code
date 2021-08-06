@@ -1,4 +1,20 @@
 library(tidyverse)
+library(data.table)
+library(arrow)
+
+results_path <- "/home/nicolai/Desktop/results_merged.feather"
+
+
+### function for removing non-distinct values
+
+results_merged <- results_merged %>% mutate(protocol = "test", outcome = "qol")
+
+results_merged <- results_merged %>% mutate.(protocol = "proto", outcome = "outcome")
+
+results_merged %>%
+    distinct(across(-starts_with("iteration"))) %>%
+    nrow()
+
 
 
 subs_1k <- subsets %>% discard(~ nrow(.x) < 2)
