@@ -372,14 +372,22 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 ###### split list to multi_out and dfs
 cat("Starting list splitting", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-tic("Concat lists")
+tic("Splitting lists")
 subsets <- c(
   rrapply(subsets, f = identity, classes = "data.frame", how = "flatten"),
   rrapply(subsets, f = identity, classes = "list", how = "flatten") %>%
     flatten()
 )
 toc()
-cat("Length of final subsets:", length(subsets), "\n")
+cat("Length of subsets after split:", length(subsets), "\n")
+cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
+
+###### REMOVE SUBSETS WITH 1K
+tic("Remove k = 1 subsets")
+
+subsets <- subsets %>% discard(~ nrow(.x) == 2)
+toc()
+cat("Length of subsets after removal of k = 1:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # tic("Writing subsets_final")
@@ -388,12 +396,11 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 tic("Meta-analysis")
-plan(multicore, workers = 13)
+plan(multicore, workers = 20)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
 toc()
-
 
 ## EXTRACT RESULTS ---------------------------------------------------
 results_df <- results %>%
