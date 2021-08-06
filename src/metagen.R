@@ -123,7 +123,10 @@ bin_outcomes <- c(
 )
 
 # FOR NOW REMOVE BIN OUTCOMES RCT, INSTABILITY, MALUNION, STIFFNESS, IMPINGEMENT
-data_extract <- data_extract %>% select(-starts_with(c("rct", "instability", "malunion", "stiffness", "impingement")))
+data_extract <- data_extract %>%
+  select(-starts_with(
+    c("rct", "instability", "malunion", "stiffness", "impingement")
+  ))
 
 
 cont_outcomes <- c(func_outcomes, qol_outcomes)

@@ -2,18 +2,11 @@
 
 # FUNC 
 ## NO PROTOCOL
-for number in 1 2 3 4 5 6
-do
-sbatch slurm_job.sh func none $number
-sleep 3s
-done
+sh run_splits.sh func none
 
-## HANDOLL SPLIT
-for number in 1 2 3 4 5 6
-do
-sbatch slurm_job.sh func handoll $number
-sleep 3s
-done
+## HANDOLL
+sh run_splits.sh func handoll
+
 
 ## WITH PROTOCOLS 
 for protocol in beks skou
@@ -24,18 +17,10 @@ done
 
 # BIN 
 ## NO PROTOCOL
-for number in 1 2 3 4 5 6
-do
-sbatch slurm_job.sh bin none $number
-sleep 3s
-done
+sh run_splits.sh bin none
 
 ## Handoll split
-for number in 1 2 3 4 5 6
-do
-sbatch slurm_job.sh bin handoll $number
-sleep 3s
-done
+sh run_splits.sh bin handoll
 
 ## WITH PROTOCOLS
 for protocol in beks skou
