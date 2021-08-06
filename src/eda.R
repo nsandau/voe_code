@@ -1,4 +1,20 @@
 library(tidyverse)
+
+
+subs_1k <- subsets %>% discard(~ nrow(.x) < 2)
+
+length(subs_1k)
+
+
+
+
+
+
+
+
+
+
+
 sel_grid <- read_rds("output/sel_grid_qol.rds")
 OUTCOME <- "func"
 PROTOCOL <- "none"
@@ -6,6 +22,7 @@ SPLIT_NO <- 1
 N_SPLITS <- 6
 
 splits <- list()
+
 
 for (SPLIT_NO in 1:6) {
     sel_grid <- read_rds("output/sel_grid_qol.rds")
