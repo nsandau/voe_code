@@ -1,17 +1,17 @@
 #!/bin/bash
 
+# outcome, protocol, n_splits
+
 # BIN 
 ## NO PROTOCOL
-bash run_splits.sh bin none 10 
+bash run_splits.sh bin none 15
 
 ## Handoll split
-bash run_splits.sh bin handoll 6
+bash run_splits.sh bin handoll 5
 
 ## WITH PROTOCOLS
-for protocol in beks skou
-do
-sbatch slurm_job.sh bin $protocol 1 1
-sleep 3s
+for protocol in beks skou; do
+bash run_splits.sh bin $protocol 1
 done
 
 
@@ -24,18 +24,14 @@ bash run_splits.sh func handoll 6
 
 
 ## WITH PROTOCOLS 
-for protocol in beks skou
-do
-sbatch slurm_job.sh func $protocol 1 1
-sleep 3s
+for protocol in beks skou; do
+bash run_splits.sh func $protocol 1
 done
 
 # QOL 
 ## ALL # beks doesnt include qol
-for protocol in none handoll skou
-do
-sbatch slurm_job.sh qol $protocol 1 1
-sleep 3s
+for protocol in none handoll skou; do
+bash run_splits.sh qol $protocol 1
 done
 
 

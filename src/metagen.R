@@ -397,14 +397,8 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 # Conduct metagen ---------------------------------------------------------
 
-if (OUTCOME == "bin" & "PROTOCOL" == "none") {
-  ma_workers <- 10
-} else {
-  ma_workers <- 15
-}
-
 tic("Meta-analysis")
-plan(multicore, workers = ma_workers)
+plan(multicore, workers = 15)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)
