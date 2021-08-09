@@ -299,21 +299,17 @@ sel_grid <- data %>%
 tictoc::toc()
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-
-if (OUTCOME %in% c("func", "bin") & PROTOCOL %in% c("none", "handoll")) {
+if (N_SPLITS > 1) {
   cat("Splitting sel_grid", "\n")
   part <- floor(nrow(sel_grid) / N_SPLITS)
-
   start <- ((SPLIT_NO - 1) * part + 1)
   stop <- (SPLIT_NO * part)
-
   if (SPLIT_NO == N_SPLITS) {
     stop <- nrow(sel_grid)
   }
-
   sel_grid <- sel_grid[start:stop, ]
-  cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
 }
+cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
