@@ -13,13 +13,14 @@ OUTCOME <- args[1]
 PROTOCOL <- args[2]
 testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none"))
 
-## ARG 3: SPLIT
-N_SPLITS <- 8
-testthat::expect_true(args[3] %in% as.character(1:N_SPLITS))
-SPLIT_NO <- as.integer(args[3])
+## ARG 3: N_SPLITS
+N_SPLITS <- as.integer(args[3])
 
+## ARG 4: SPLIT
+testthat::expect_true(args[4] %in% as.character(1:N_SPLITS))
+SPLIT_NO <- as.integer(args[4])
 
-## ARG 4: DEV-RUN: if any given conduct dev-run
+## ARG 5: DEV-RUN: if any given conduct dev-run
 if (is.na(args[4])) {
   DEV_RUN <- FALSE
 } else {
@@ -398,8 +399,15 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 # toc()
 
 # Conduct metagen ---------------------------------------------------------
+
+if (OUTCOME == "bin" & "PROTOCOL" == "none") {
+  ma_workers <- 10
+} else {
+  ma_workers <- 15
+}
+
 tic("Meta-analysis")
-plan(multicore, workers = 15)
+plan(multicore, workers = ma_workers)
 results <- subsets %>%
   future_map(~ do_meta(.x, outcome = OUTCOME))
 plan(sequential)

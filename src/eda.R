@@ -4,6 +4,10 @@ library(arrow)
 
 results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
+res <- read_feather("output/results_merged.feather")
+
+
+res %>% glimpse()
 
 ### function for removing non-distinct values
 

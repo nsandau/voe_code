@@ -8,4 +8,6 @@
 #SBATCH --mail-user=nclibz@gmail.com
 #SBATCH --partition=modi_short  # modi_devel 15min, modi_short 48h, modi_long 7d 
 
-singularity exec library://nclibz/default/image:latest Rscript ./src/metagen.R $1 $2 $3 $4
+# args
+# 1: outcome, 2: protocol, 3: n_splits, 4: split_no, 5: dev_run
+singularity exec library://nclibz/default/image:latest Rscript ./src/metagen.R $1 $2 $3 $4 $5
