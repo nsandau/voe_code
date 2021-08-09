@@ -21,7 +21,7 @@ testthat::expect_true(args[4] %in% as.character(1:N_SPLITS))
 SPLIT_NO <- as.integer(args[4])
 
 ## ARG 5: DEV-RUN: if any given conduct dev-run
-if (is.na(args[4])) {
+if (is.na(args[5])) {
   DEV_RUN <- FALSE
 } else {
   DEV_RUN <- TRUE
