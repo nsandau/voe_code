@@ -297,6 +297,7 @@ tictoc::tic("Selection grid")
 sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL)
 tictoc::toc()
+cat("Length of sel_grid before split: ", nrow(sel_grid), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 if (N_SPLITS > 1) {
@@ -386,7 +387,7 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 ###### REMOVE SUBSETS WITH 1K
 tic("Remove k = 1 subsets")
 
-subsets <- subsets %>% discard(~ nrow(.x) == 2)
+subsets <- subsets %>% discard(~ nrow(.x) == 1)
 toc()
 cat("Length of subsets after removal of k = 1:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
