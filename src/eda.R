@@ -4,6 +4,20 @@ library(arrow)
 
 results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
+
+### finding bin outlier
+
+
+results_df %>% filter(te.random > 50)
+
+pvals %>%
+    filter(estimate > 50) %>%
+    sel_grid[[12913]]
+
+
+subsets[["129133"]]
+
+
 res <- read_feather("output/results_merged.feather")
 
 
