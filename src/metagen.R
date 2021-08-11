@@ -1,31 +1,28 @@
 
-# ARGUMENTS 1: outcome, 2: split_number, 3: Dev_run
-args <- commandArgs(trailingOnly = TRUE)
+library(argparser)
 
-if (length(args) == 0) {
-  stop("Need to supply outcome", call. = FALSE)
-}
-## ARG 1: OUTCOME
-testthat::expect_true(args[1] %in% c("qol", "func", "bin"))
-OUTCOME <- args[1]
+p <- arg_parser("metagen")
 
-## ARG 2: PROTOCOL
-PROTOCOL <- args[2]
+p <- add_argument(p, "outcome", help = "define outcome", type = "character")
+p <- add_argument(p, "protocol", help = "define protocol", type = "character")
+p <- add_argument(p, "n_splits", help = "No. of splits", type = "integer")
+p <- add_argument(p, "split_no", help = "Split no for this run", type = "integer")
+p <- add_argument(p, "-dev_run", help = "conduct dev_run", flag = T)
+
+args <- parse_args(p)
+
+OUTCOME <- args$outcome
+testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
+
+PROTOCOL <- args$protocol
 testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none"))
 
-## ARG 3: N_SPLITS
-N_SPLITS <- as.integer(args[3])
+N_SPLITS <- args$n_splits
 
-## ARG 4: SPLIT
-testthat::expect_true(args[4] %in% as.character(1:N_SPLITS))
-SPLIT_NO <- as.integer(args[4])
+SPLIT_NO <- args$split_no
+testthat::expect_true(SPLIT_NO %in% as.character(1:N_SPLITS))
 
-## ARG 5: DEV-RUN: if any given conduct dev-run
-if (is.na(args[5])) {
-  DEV_RUN <- FALSE
-} else {
-  DEV_RUN <- TRUE
-}
+DEV_RUN <- args$dev_run
 
 ##### LIBRARIES
 
