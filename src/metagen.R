@@ -15,7 +15,7 @@ OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
 
 PROTOCOL <- args$protocol
-testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none"))
+testthat::expect_true(PROTOCOL %in% c("handoll", "beks", "skou", "none", "rct"))
 
 N_SPLITS <- args$n_splits
 
