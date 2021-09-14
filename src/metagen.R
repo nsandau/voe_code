@@ -7,7 +7,7 @@ p <- add_argument(p, "outcome", help = "define outcome", type = "character")
 p <- add_argument(p, "protocol", help = "define protocol", type = "character")
 p <- add_argument(p, "n_splits", help = "No. of splits", type = "integer")
 p <- add_argument(p, "split_no", help = "Split no for this run", type = "integer")
-p <- add_argument(p, "-dev_run", help = "conduct dev_run", flag = T)
+p <- add_argument(p, "--dev_run", help = "conduct dev_run", flag = T)
 
 args <- parse_args(p)
 

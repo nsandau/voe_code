@@ -247,6 +247,13 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
         }
     }
 
+
+    if (protocol %in% c("rct")) {
+        grid_vals["design"] <- 1
+        }
+    }
+
+
     ### CREATE GRID
     grid <- expand_grid.(!!!grid_vals) %>%
         mutate.(
