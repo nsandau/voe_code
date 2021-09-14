@@ -229,7 +229,6 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
     }
 
 
-
     if (protocol == "skou") {
         grid_vals[["language"]] <- 2
         grid_vals[["age"]] <- 5 # > 18 years
@@ -248,9 +247,8 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
     }
 
 
-    if (protocol %in% c("rct")) {
+    if (protocol == "rct") {
         grid_vals["design"] <- 1
-        }
     }
 
 
@@ -260,8 +258,6 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
             across.(where(is.numeric), as.integer),
             across.(where(is.character), as_factor)
         )
-
-
     return(grid)
 }
 
