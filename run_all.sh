@@ -8,7 +8,7 @@ bash run_splits.sh bin none 15 # passende
 
 ## HANDOL AND RCT split
 for protocol in handoll rct; do
-bash run_splits.sh bin $protocol 3 # untested. decreased from 5
+bash run_splits.sh bin $protocol 3 
 done
 
 ## BEKS AND SKOU
@@ -22,7 +22,7 @@ bash run_splits.sh func none 8 # passende
 
 ## HANDOLL AND RCT
 for protocol in handoll rct; do
-bash run_splits.sh func $protocol 2 # untested. decreased from 5
+bash run_splits.sh func $protocol 2 
 done
 
 ## SKOU BEKS 

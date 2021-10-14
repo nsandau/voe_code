@@ -229,7 +229,7 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
     }
 
 
-    if (protocol == "skou") {
+    if (protocol %in% c("skou", "skou_rct")) {
         grid_vals[["language"]] <- 2
         grid_vals[["age"]] <- 5 # > 18 years
         grid_vals[["imputed"]] <- 2 # studies not need imputation, and studies with imputed vals from hanbook
@@ -243,6 +243,10 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
             grid_vals[["year"]] <- 1 # only studies published after 2000
             grid_vals[["design"]] <- 2 # RCT + any type of NRSI
             grid_vals[["follow_up"]] <- 98 # only val closest to 12 mths bin_fu_long recoded
+
+            if (protocol == "skou_rct") {
+                grid_vals[["design"]] <- 1
+            }
         }
     }
 
