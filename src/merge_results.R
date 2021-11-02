@@ -60,7 +60,7 @@ write_feather(
 
 
 ## Merge distinct results
-results_merged() <- results_merged %>%
+results_merged <- results_merged %>%
     distinct.(-starts_with("iteration"), .keep_all = T)
 
 write_feather(
