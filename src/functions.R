@@ -262,6 +262,12 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
             across.(where(is.numeric), as.integer),
             across.(where(is.character), as_factor)
         )
+
+    ## Add row_id
+    grid <- grid %>% mutate.(
+        row_id = row_number.()
+    )
+
     return(grid)
 }
 
@@ -299,11 +305,12 @@ remove_nulls <- function(df, grid, list_of_combos) {
 # split multi outcome -----------------------------------------
 
 
-split_multi_outc <- function(df) {
+split_multi_outc <- function(df, row_id) {
     outcomes <- unique(df[duplicated(df[["studlab"]])][["outcome"]])
 
     loop_out <- list()
     for (outc in outcomes) {
+        lbl <- str_c(as.character(row_id), outc)
         prim_df <- df[outcome == outc]
 
         prim_studlabs <- unique(prim_df[["studlab"]])
@@ -313,13 +320,13 @@ split_multi_outc <- function(df) {
 
         if (!any(duplicated(rest_df$studlab))) {
             if (nrow(rest_df) > 0) {
-                loop_out[[outc]] <- list(prim_df, rest_df)
+                loop_out[[lbl]] <- list(prim_df, rest_df)
             } else {
-                loop_out[[outc]] <- list(prim_df)
+                loop_out[[lbl]] <- list(prim_df)
             }
         } else {
-            split_list <- split_multi_outc(rest_df)
-            loop_out[[outc]] <- c(list(prim_df), flatten(split_list))
+            split_list <- split_multi_outc(rest_df, row_id)
+            loop_out[[lbl]] <- c(list(prim_df), flatten(split_list))
         }
     }
     return(loop_out)
@@ -328,6 +335,7 @@ split_multi_outc <- function(df) {
 ### SUBSET FUNCTION --------------------
 
 do_subset <- function(df,
+                      row_id,
                       language,
                       year,
                       design,
@@ -440,7 +448,7 @@ do_subset <- function(df,
         return(NULL)
     }
     if (any(duplicated(subset[["studlab"]]))) {
-        subset <- split_multi_outc(subset) %>%
+        subset <- split_multi_outc(subset, row_id) %>%
             map(rbindlist)
     } else {
         return(subset)

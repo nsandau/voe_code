@@ -11,6 +11,8 @@ p <- add_argument(p, "--dev_run", help = "conduct dev_run", flag = T)
 
 args <- parse_args(p)
 
+# args <- list(outcome = "qol", protocol = "none", "n_splits" = 1, "split_no" = 1)
+
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
 

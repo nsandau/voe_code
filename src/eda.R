@@ -1,12 +1,24 @@
 library(tidyverse)
+library(tidytable)
 library(data.table)
 library(arrow)
 
 results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
 
-### finding bin outlier
 
+
+grid <- readr::read_rds("output/sel_grid_qol.rds")
+
+
+## add row_numbers
+grid %>%
+    mutate.(
+        iter = row_number.()
+    ) %>%
+    slice_sample(n = 50) %>%
+    View()
+### finding bin outlier
 
 results_df %>% filter(te.random > 50)
 
