@@ -19,6 +19,7 @@ df_paths <- output_dir %>%
 results_dfs <- df_paths %>%
     str_subset("results_") %>%
     str_subset("merged", negate = T)
+# %>% str_subset("handoll")
 
 cat("Files identified:", results_dfs, sep = " \n")
 
@@ -33,21 +34,41 @@ results_merged <- results_dfs %>%
     rbindlist(fill = T)
 plan(sequential)
 
+## n_simulations
+
 n_simulations <- results_merged %>%
     count.(protocol, outcome)
 
-results_merged <- results_merged %>%
-    distinct.(-starts_with("iteration"))
+write_feather(
+    n_simulations,
+    here::here("output", str_c("n_", "simulations", ".feather"))
+)
+
+## Most discordant
+
+# results_merged %>%
+#     filter.(
+#         pval.fixed < 0.05 | pval.random < 0.05,
+#         .by = c(protocol, outcome)
+#     ) %>%
+#     pivot_longer.(cols = c(te.fixed, te.random), values_to = "estimates", names_to = "method") %>%
+#     filter.(estimates == max(estimates) | estimates == min(estimates), .by = c(protocol, outcome)) %>%
+#     slice_sample(n = 100) %>%
+#     filter.(k > 1) %>%
+#     View()
+
+
+
+## Merge distinct results
+results_merged() <- results_merged %>%
+    distinct.(-starts_with("iteration"), .keep_all = T)
 
 write_feather(
     results_merged,
     here::here("output", str_c("results_", "merged", ".feather"))
 )
 
-write_feather(
-    n_simulations,
-    here::here("output", str_c("n_", "simulations", ".feather"))
-)
+
 
 # pvals_merged <- df_paths %>%
 #     str_subset("pvals_") %>%
