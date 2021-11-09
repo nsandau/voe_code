@@ -310,7 +310,7 @@ split_multi_outc <- function(df, row_id) {
 
     loop_out <- list()
     for (outc in outcomes) {
-        lbl <- str_c(as.character(row_id), outc)
+        lbl <- str_c(as.character(row_id), "_", outc)
         prim_df <- df[outcome == outc]
 
         prim_studlabs <- unique(prim_df[["studlab"]])
