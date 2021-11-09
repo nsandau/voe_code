@@ -10,6 +10,8 @@ results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
 grid <- readr::read_rds("output/sel_grid_qol.rds")
 
+grid  %>% mutate.(id = row_number.()) %>% slice(idx) %>% mutate(iter = idx) %>% select(iter, id)
+
 
 ## add row_numbers
 grid %>%

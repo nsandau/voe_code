@@ -9,6 +9,8 @@ p <- add_argument(p, "n_splits", help = "No. of splits", type = "integer")
 p <- add_argument(p, "split_no", help = "Split no for this run", type = "integer")
 p <- add_argument(p, "--dev_run", help = "conduct dev_run", flag = T)
 
+p <- add_argument(p, "--most_disc", help = "Output methodological choices for most discordant results", flag = T)
+
 args <- parse_args(p)
 
 # args <- list(outcome = "qol", protocol = "none", "n_splits" = 1, "split_no" = 1)
@@ -25,6 +27,8 @@ SPLIT_NO <- args$split_no
 testthat::expect_true(SPLIT_NO %in% as.character(1:N_SPLITS))
 
 DEV_RUN <- args$dev_run
+
+MOST_DISC <- args$most_disc
 
 ##### LIBRARIES
 
@@ -331,6 +335,24 @@ nrow_after <- nrow(sel_grid)
 cat("Rows after removal of nulls:", nrow_after, "\n")
 nrow_diff <- nrow_before - nrow_after
 cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
+
+if (MOST_DISC) {
+  if (OUTCOME == "func") {
+    if (PROTOCOL == "handoll") {
+      idx <- c(34472, 104528)
+    }
+    if (PROTOCOL == "none") {
+      idx <- c(3762487, 15414668)
+    }
+  }
+
+  sel_grid %>%
+    slice(idx) %>%
+    mutate(iter = idx) %>%
+    write_rds(here("output", str_c("most_disc_", OUTCOME, "_", PROTOCOL, ".rds")))
+
+  quit(save = "no")
+}
 
 # tic("Writing sel_grid")
 # write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
