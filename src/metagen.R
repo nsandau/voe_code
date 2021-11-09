@@ -329,8 +329,7 @@ if (MOST_DISC) {
   }
 
   sel_grid %>%
-    slice(idx) %>%
-    mutate(iter = idx) %>%
+    filter(row_id %in% idx) %>%
     write_rds(here("output", str_c("most_disc_", OUTCOME, "_", PROTOCOL, ".rds")))
 
   quit(save = "no")
