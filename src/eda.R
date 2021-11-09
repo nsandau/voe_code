@@ -8,9 +8,14 @@ results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
 
 
-grid <- readr::read_rds("output/sel_grid_qol.rds")
+grid <- readr::read_rds("output/sel_grid_qol.rds") %>% mutate(row_id = row_number())
+sel_grid <- grid
 
-grid  %>% mutate.(id = row_number.()) %>% slice(idx) %>% mutate(iter = idx) %>% select(iter, id)
+grid %>%
+    mutate.(id = row_number.()) %>%
+    slice(idx) %>%
+    mutate(iter = idx) %>%
+    select(iter, id)
 
 
 ## add row_numbers
