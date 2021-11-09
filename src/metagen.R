@@ -316,6 +316,25 @@ if (N_SPLITS > 1) {
 cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
+### SUBSET MOST DISCORDANT IF FLAG IS GIVEN
+
+if (MOST_DISC) {
+  if (OUTCOME == "func") {
+    if (PROTOCOL == "handoll") {
+      idx <- c(34472, 104528)
+    }
+    if (PROTOCOL == "none") {
+      idx <- c(3762487, 15414668)
+    }
+  }
+
+  sel_grid %>%
+    slice(idx) %>%
+    mutate(iter = idx) %>%
+    write_rds(here("output", str_c("most_disc_", OUTCOME, "_", PROTOCOL, ".rds")))
+
+  quit(save = "no")
+}
 
 # remove nulls
 combs <- list(
@@ -335,24 +354,6 @@ nrow_after <- nrow(sel_grid)
 cat("Rows after removal of nulls:", nrow_after, "\n")
 nrow_diff <- nrow_before - nrow_after
 cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
-
-if (MOST_DISC) {
-  if (OUTCOME == "func") {
-    if (PROTOCOL == "handoll") {
-      idx <- c(34472, 104528)
-    }
-    if (PROTOCOL == "none") {
-      idx <- c(3762487, 15414668)
-    }
-  }
-
-  sel_grid %>%
-    slice(idx) %>%
-    mutate(iter = idx) %>%
-    write_rds(here("output", str_c("most_disc_", OUTCOME, "_", PROTOCOL, ".rds")))
-
-  quit(save = "no")
-}
 
 # tic("Writing sel_grid")
 # write_feather(sel_grid, here::here("output", str_c("sel_grid_", OUTCOME, ".feather")))
