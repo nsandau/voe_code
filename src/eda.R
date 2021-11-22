@@ -6,6 +6,11 @@ library(arrow)
 results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
 
+subsets %>% names()
+
+test_list <- list("tester" = data_cont, "tester3" = list("2_jas" = data_cont, "2_jos" = data_cont))
+
+test_list %>% set_names(seq_along(.))
 
 
 grid <- readr::read_rds("output/sel_grid_qol.rds") %>% mutate(row_id = row_number())
