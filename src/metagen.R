@@ -467,14 +467,13 @@ if (PROTOCOL == "skou") {
   results_df <- results_df %>% select(-contains("fixed"))
 }
 
-tic("Writing results ")
-write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
-toc()
-
 if (MOST_DISC) {
   most_disc[["results_df"]] <- results_df
-
   most_disc %>% readr::write_rds(str_c("output/", "most_disc_", OUTCOME, "_", PROTOCOL, ".rds"))
+} else {
+  tic("Writing results ")
+  write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
+  toc()
 }
 
 # total runtime
