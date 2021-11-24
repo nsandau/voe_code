@@ -347,7 +347,7 @@ sel_grid <- sel_grid %>% mutate.(
 if (MOST_DISC) {
   if (OUTCOME == "func") {
     if (PROTOCOL == "handoll") {
-      idx <- c(34472, 104528)
+      idx <- c(103415, 313583)
     }
     if (PROTOCOL == "none") {
       idx <- c(3762487, 15414668)
