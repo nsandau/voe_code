@@ -4,34 +4,63 @@ library(data.table)
 library(arrow)
 
 
-data_cont %>%
-    group_by(studlab, outcome) %>%
-    mutate(
-        bin_ttfu_old = case_when(
-            max(follow_up) >= 12 ~ 1,
-            between(max(follow_up), 6, 11.999) ~ 2,
-            TRUE ~ 3
-        )
-    ) %>%
-    group_by(studlab, outcome, follow_up) %>%
-    mutate(bin_ttfu = case_when(
-        follow_up >= 12 ~ 1,
-        between(follow_up, 6, 11.999) ~ 2,
-        TRUE ~ 3
-    )) %>%
-    group_by(studlab) %>%
-    select(studlab, outcome, follow_up, bin_ttfu, bin_ttfu_old)
+subset
+
+
+OUTCOME <- "qol"
+PROTOCOL <- "handoll"
+
+sel_grid <- readr::read_rds("output/sel_grid_qol.rds") %>% mutate.(row_id = row_number.())
+
+## read in results_merged
+
+results_merged <- read_feather("output/results_merged.feather")
+
+
+## identify most disc for specific outcome and protocol
+
+most_disc <- list()
+
+results <- results_merged %>%
+    gather_pvals() %>%
+    drop_na() %>%
+    filter(outcome == OUTCOME, protocol == PROTOCOL) %>%
+    filter(estimate == max(estimate) | estimate == min(estimate)) %>%
+    arrange(iteration)
+
+most_disc[["results"]] <- results
+
+idx <- results %>%
+    distinct(iteration) %>%
+    pull(iteration) %>%
+    as.integer()
+
+## use indexes to subset sel grid
+
+sel_grid <- sel_grid %>%
+    filter(row_id %in% idx)
+
+most_disc[["sel_grid"]] <- sel_grid
+
+## Create a list with sel_grid, subsets and meta-analyses
 
 
 
 
 
+read_feather(results_path) %>%
+    pivot_longer(c(te.fixed, te.random)) %>%
+    filter(k > 1) %>%
+    select(name, value, pval.fixed, pval.random, protocol, iteration) %>%
+    filter(protocol == "handoll") %>%
+    arrange(value)
 
 
-results_path <- "/home/nicolai/Desktop/results_merged.feather"
-
-
-subsets %>% names()
+read_feather(results_path) %>%
+    gather_pvals() %>%
+    filter(protocol == "handoll", outcome == "func") %>%
+    subsets() %>%
+    names()
 
 test_list <- list("tester" = data_cont, "tester3" = list("2_jas" = data_cont, "2_jos" = data_cont))
 

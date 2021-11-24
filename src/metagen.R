@@ -342,23 +342,31 @@ sel_grid <- sel_grid %>% mutate.(
   row_id = row_number.()
 )
 
-### SUBSET MOST DISCORDANT IF FLAG IS GIVEN
+### Only do analyses for MOST DISCORDANT IF FLAG IS GIVEN
 
 if (MOST_DISC) {
-  if (OUTCOME == "func") {
-    if (PROTOCOL == "handoll") {
-      idx <- c(103415, 313583)
-    }
-    if (PROTOCOL == "none") {
-      idx <- c(3762487, 15414668)
-    }
-  }
+  results_merged <- read_feather("output/results_merged.feather")
+  most_disc <- list()
 
-  sel_grid %>%
-    filter(row_id %in% idx) %>%
-    write_rds(here("output", str_c("most_disc_", OUTCOME, "_", PROTOCOL, ".rds")))
+  results <- results_merged %>%
+    filter(k > 1) %>%
+    gather_pvals() %>%
+    drop_na() %>%
+    filter(outcome == OUTCOME, protocol == PROTOCOL) %>%
+    filter(estimate == max(estimate) | estimate == min(estimate)) %>%
+    arrange(iteration)
 
-  quit(save = "no")
+  most_disc[["results"]] <- results
+
+  idx <- results %>%
+    distinct(iteration) %>%
+    pull(iteration) %>%
+    as.integer()
+
+  sel_grid <- sel_grid %>%
+    filter(row_id %in% idx)
+
+  most_disc[["sel_grid"]] <- sel_grid
 }
 
 
@@ -425,6 +433,13 @@ cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 # write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_final_", OUTCOME, ".feather")))
 # toc()
 
+## Save subsets to most_disc list if flag given
+
+if (MOST_DISC) {
+  most_disc[["subsets"]] <- subsets
+}
+
+
 # Conduct metagen ---------------------------------------------------------
 
 tic("Meta-analysis")
@@ -434,6 +449,10 @@ results <- subsets %>%
 plan(sequential)
 toc()
 
+if (MOST_DISC) {
+  most_disc[["ma"]] <- results
+}
+
 ## EXTRACT RESULTS ---------------------------------------------------
 results_df <- results %>%
   extract_meta(outcome = OUTCOME) %>%
@@ -441,24 +460,22 @@ results_df <- results %>%
 
 cat("Results_df rows", nrow(results_df), "\n")
 
-pvals <- results_df %>%
-  gather_pvals() %>%
-  mutate(protocol = PROTOCOL, outcome = OUTCOME)
 
 ### RECODE PROTOCOL SKOU ONLY USES RANDOM EFFECTS
 
 if (PROTOCOL == "skou") {
   results_df <- results_df %>% select(-contains("fixed"))
-  pvals <- pvals %>% filter(method != "fixed")
 }
-
-### WRITE RESULTS
 
 tic("Writing results ")
 write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
-
-# write_feather(pvals, here::here("output", str_c("pvals_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
 toc()
+
+if (MOST_DISC) {
+  most_disc[["results_df"]] <- results_df
+
+  most_disc %>% readr::write_rds(str_c("output/", "most_disc_", OUTCOME, "_", PROTOCOL, ".rds"))
+}
 
 # total runtime
 toc()

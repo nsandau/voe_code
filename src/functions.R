@@ -525,24 +525,42 @@ extract_meta <- function(data, outcome) {
     return(res)
 }
 
+
+
+
+
 # gather pvals ------------------------------------------------------------
 
 gather_pvals <- function(data) {
     data %>%
         transmute(
+            iteration = iteration,
             pval = pval.fixed,
             estimate = te.fixed,
             k = k,
-            method = "fixed"
+            method = "fixed",
+            outcome = outcome,
+            protocol = protocol,
+            i2 = i2,
+            q = q,
+            pval.q = pval.q,
+            studlab = studlab
         ) %>%
         bind_rows(
             .,
             data %>%
                 transmute(
+                    iteration = iteration,
                     pval = pval.random,
                     estimate = te.random,
                     k = k,
-                    method = "random"
+                    method = "random",
+                    outcome = outcome,
+                    protocol = protocol,
+                    i2 = i2,
+                    q = q,
+                    pval.q = pval.q,
+                    studlab = studlab
                 )
         )
 }
