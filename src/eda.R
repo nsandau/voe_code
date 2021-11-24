@@ -7,6 +7,14 @@ library(arrow)
 subset
 
 
+idx <- c("3261299_sf12pcs", "11633")
+
+
+str_split(idx, "_") %>%
+    map(~ .x[[1]]) %>%
+    unlist()
+
+
 OUTCOME <- "qol"
 PROTOCOL <- "handoll"
 

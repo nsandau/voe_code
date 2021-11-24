@@ -352,7 +352,7 @@ if (MOST_DISC) {
     filter(k > 1) %>%
     gather_pvals() %>%
     drop_na() %>%
-    filter(outcome == OUTCOME, protocol == PROTOCOL) %>%
+    filter(outcome == OUTCOME, protocol == PROTOCOL, pval < 0.05) %>%
     filter(estimate == max(estimate) | estimate == min(estimate)) %>%
     arrange(iteration)
 
@@ -361,6 +361,9 @@ if (MOST_DISC) {
   idx <- results %>%
     distinct(iteration) %>%
     pull(iteration) %>%
+    str_split("_") %>%
+    map(~ .x[[1]]) %>%
+    unlist() %>%
     as.integer()
 
   sel_grid <- sel_grid %>%
