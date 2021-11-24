@@ -81,11 +81,6 @@ make_binary <- function(df, outcome, protocol) {
                 between(follow_up, 0, 11.999) ~ 1,
                 between(follow_up, 12, 23.999) ~ 2,
                 follow_up >= 24 ~ 3
-            ),
-            bin_ttfu = case_when(
-                max(follow_up) >= 12 ~ 1,
-                between(max(follow_up), 6, 11.999) ~ 2,
-                TRUE ~ 3
             )
         ) %>%
         group_by(studlab, outcome, bin_fu_period) %>%
@@ -93,6 +88,14 @@ make_binary <- function(df, outcome, protocol) {
             bin_fu_period_long = case_when(
                 follow_up == max(follow_up) ~ 1,
                 TRUE ~ 0
+            )
+        ) %>%
+        group_by(studlab, outcome, follow_up) %>%
+        mutate(
+            bin_ttfu = case_when(
+                follow_up >= 12 ~ 1,
+                between(follow_up, 6, 11.999) ~ 2,
+                TRUE ~ 3
             )
         ) %>%
         ungroup() %>%

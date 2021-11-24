@@ -3,6 +3,31 @@ library(tidytable)
 library(data.table)
 library(arrow)
 
+
+data_cont %>%
+    group_by(studlab, outcome) %>%
+    mutate(
+        bin_ttfu_old = case_when(
+            max(follow_up) >= 12 ~ 1,
+            between(max(follow_up), 6, 11.999) ~ 2,
+            TRUE ~ 3
+        )
+    ) %>%
+    group_by(studlab, outcome, follow_up) %>%
+    mutate(bin_ttfu = case_when(
+        follow_up >= 12 ~ 1,
+        between(follow_up, 6, 11.999) ~ 2,
+        TRUE ~ 3
+    )) %>%
+    group_by(studlab) %>%
+    select(studlab, outcome, follow_up, bin_ttfu, bin_ttfu_old)
+
+
+
+
+
+
+
 results_path <- "/home/nicolai/Desktop/results_merged.feather"
 
 

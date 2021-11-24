@@ -73,7 +73,7 @@ conflict_prefer("filter", "dplyr", quiet = T)
 
 # IMPORT ------------------------------------------------------------------
 
-# if running on local import directly from xlsx else import from
+# if running on local import directly from xlsx else import from saved RDS
 
 if (cores < 20) {
   read_excel("/home/nicolai/OneDrive/Forskning/Phd/3 Simulation/02 - Data extract/outcome extract/p3 data extract.xlsx") %>%
