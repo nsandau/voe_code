@@ -168,20 +168,8 @@ get_dupli_outcomes <- function(df) {
 }
 
 
-get_unq_rest_df <- function(df, prim_df) {
-    rest_df <- df %>% filter.(!studlab %in% prim_df[["studlab"]])
-    dupli_studlabs <- rest_df %>%
-        count.(studlab) %>%
-        filter(N > 1) %>%
-        pull.(studlab)
-
-    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
-    return(unq_rest)
-}
-
 
 get_dfs <- function(df, outcomes) {
-
     loop_out <- list()
     if (length(outcomes) == 0) {
         loop_out[[1]] <- df
@@ -194,38 +182,26 @@ get_dfs <- function(df, outcomes) {
 }
 
 
-get_rests <- function(df, base_dfs) {
-    out <- list()
-
-    for (idx in seq_along(base_dfs)) {
-        base_df <- base_dfs[[idx]]
-        out[[idx]] <- df %>% filter.(!studlab %in% base_df[["studlab"]])
-    }
-    return(out)
-}
-
 merge_dfs <- function(base_df, prim_dfs) {
     out <- list()
     for (idx in seq_along(prim_dfs)) {
         df <- prim_dfs[[idx]]
-        out[[idx]] <- bind_rows.(df, base_df)
+        out[[idx]] <- bind_rows.(base_df, df)
     }
     return(out)
 }
 
-get_dupli_outcomes_nested <- function(list_of_rests) {
-    list_of_rests %>% map(~get_dupli_outcomes(.x))
-}
 
 
 ## for loop over outcomes
-split_outcomes <- function(df, outc) {
+split_outcomes <- function(df, outc, row_id) {
+    out <- list()
     ### Filter on primary outcome ->  filter unq -> merge to base_df
     prim_df <- df %>% filter.(outcome == outc)
     rest_df <- df %>% filter.(!studlab %in% prim_df[["studlab"]])
     dupli_studlabs <- rest_df %>%
         count.(studlab) %>%
-        filter(N > 1) %>%
+        filter.(N > 1) %>%
         pull.(studlab)
     unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
     # it is only the first time that there are unq.
@@ -234,76 +210,69 @@ split_outcomes <- function(df, outc) {
     base_df <- bind_rows.(prim_df, unq_rest)
 
     ### Identify remaining -> split on outcome -> merge to base
-    rest_df2 <- df %>% filter.(!studlab %in% pull(base_df, studlab))
+    rest_df2 <- df %>% filter.(!studlab %in% pull.(base_df, studlab))
 
     if (nrow(rest_df2) == 0) {
-        return(base_df)
+        out <- append(out, list(base_df))
+        out <- out %>%
+            map(~ .x %>% arrange.(studlab)) %>%
+            set_names(~ str_c(row_id, outc, seq_along(.), sep = "_"))
+        return(out)
     }
 
     prim_dfs <- get_dupli_outcomes(rest_df2) %>% map(~ rest_df2 %>% filter.(outcome == .x))
-    base_dfs <- prim_dfs %>% map(~ bind_rows.(.x, base_df))
+    base_dfs <- prim_dfs %>% map(~ bind_rows.(base_df, .x))
 
     ### identify remaining -> split on outcome -> add to base_dfs
+
     rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
-    dupli_outcomes <- rest_dfs %>% map(~ get_dupli_outcomes(.x))
-    prim_dfs2 <- map2(dupli_outcomes, rest_dfs, ~ get_dfs(.y, .x))
-    base_dfs2 <- map2(prim_dfs2, base_dfs, ~ merge_dfs(.y, .x))
+    done_idx <- rest_dfs %>%
+        map(~ nrow(.x) == 0) %>%
+        unlist()
+    if (sum(done_idx) == length(base_dfs)) {
+        out <- base_dfs
+    } else {
+        out <- append(out, base_dfs[done_idx])
+    }
 
-    ### identify remaining -> split on outcome -> add to base_dfs
-    rest_dfs2 <- base_dfs2 %>% map(~df %>% filter.(!studlab %in% .x[["studlab"]]))
-    dupli_outcomes2 <- rest_dfs2 %>% map(~get_dupli_outcomes(.x))
-    prim_dfs3 <- map2(dupli_outcomes2, rest_dfs2, ~ get_dfs(.y, .x))
-    base_dfs3 <- map2(prim_dfs3, base_dfs2, ~ merge_dfs(.y, .x))
-    
-
-
-
-
-    rest_dfs2 <- base_dfs2 %>% map(~ get_rests(df, .x))
-    dupli_outcomes2 <- rest_dfs2 %>% map(~get_dupli_outcomes_nested(.x))
-    prim_dfs3 <- map2(dupli_outcomes2, rest_dfs2, ~ get_dfs(.y, .x))
+    rest_dfs <- rest_dfs[!done_idx]
+    base_dfs <- base_dfs[!done_idx]
 
 
-    return(base_dfs2)
+    while (length(base_dfs) > 0) {
+        dupli_outcomes <- rest_dfs %>% map(~ get_dupli_outcomes(.x))
+        prim_dfs <- map2(dupli_outcomes, rest_dfs, ~ get_dfs(.y, .x))
+        base_dfs <- map2(prim_dfs, base_dfs, ~ merge_dfs(.y, .x)) %>% flatten()
+
+        ### identify remaining -> split on outcome -> add to base_dfs
+        rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+        done_idx <- rest_dfs %>%
+            map(~ nrow(.x) == 0) %>%
+            unlist()
+        out <- append(out, base_dfs[done_idx])
+        rest_dfs <- rest_dfs[!done_idx]
+        base_dfs <- base_dfs[!done_idx]
+    }
+    out <- out %>%
+        map(~ .x %>% arrange.(studlab)) %>%
+        set_names(~ str_c(row_id, outc, seq_along(.), sep = "_"))
+    return(out)
 }
 ####################################### 3
 
+##
+## inde i subset func:
 
+if (any(duplicated(subset[["studlab"]]))) {
+    duplicated_outcomes <- get_dupli_outcomes(subset)
+    subset <- duplicated_outcomes %>%
+        map(~ split_outcomes(subset, .x, row_id))
 
-get_dfs2 <- function(df_list, outcomes) {
-    loop_out <- list()
-    for df in df_list {
-    
-    if (length(outcomes) == 0) {
-        loop_out[[1]] <- df
-    } else {
-        for (outc in outcomes) {
-            loop_out[[outc]] <- df %>% filter.(outcome == outc)
-        }
-    }}
-    return(loop_out)
+    if (class(subset) == "list") {
+        subset <- subset %>% flatten()
+        subset <- subset[!duplicated(subset)]
+    }
 }
-
-
-
-
-
-
-
-
-
-
-base_dfs2 %>% map(~ get_rests(df, .x))
-
-
-
-splitted_dfs <- get_dupli_outcomes(df) %>% map(~ split_outcomes(df, .x))
-
-
-
-base_dfs2 %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
-
-get_rests(df, base_dfs2[[4]])
 
 #############
 
