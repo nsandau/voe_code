@@ -2,7 +2,391 @@ library(tidyverse)
 library(tidytable)
 library(data.table)
 library(arrow)
+##### NÅET HERTIL ! ###
+split_multi_outc <- function(df, row_id) {
+    studlabs <- df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.("studlab")
+    outcomes <- df %>%
+        filter.(studlab %in% studlabs) %>%
+        pull.(outcome) %>%
+        unique() %>%
+        as.character()
 
+    loop_out <- list()
+    for (outc in outcomes) {
+        lbl <- str_c(as.character(row_id), "_", outc)
+        prim_df <- df %>% filter.(outcome == outc)
+
+        prim_studlabs <- unique(prim_df[["studlab"]])
+
+        rest_df <- df %>%
+            filter.(!studlab %in% prim_studlabs)
+
+        if (any(duplicated(rest_df$studlab))) {
+            split_list <- split_multi_outc(rest_df, row_id)
+            loop_out[[lbl]] <- c(list(prim_df), flatten(split_list))
+        } else {
+            if (nrow(rest_df) > 0) {
+                loop_out[[lbl]] <- list(prim_df, rest_df)
+            } else {
+                loop_out[[lbl]] <- list(prim_df)
+            }
+        }
+    }
+    return(loop_out)
+}
+
+# For outcomes hvor n_studlab er > 2
+
+get_dupli_outcomes <- function(df) {
+    studlabs <- df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.("studlab")
+    outcomes <- df %>%
+        filter.(studlab %in% studlabs) %>%
+        pull.(outcome) %>%
+        unique() %>%
+        as.character()
+    return(outcomes)
+}
+
+
+outc
+
+split_dfs <- function(df, outcomes, row_id) {
+    prim_df <- df %>% filter.(outcome == outc)
+    prim_studlabs <- unique(prim_df[["studlab"]])
+    rest_df <- df %>%
+        filter.(!studlab %in% prim_studlabs)
+    dupli_rest <- rest_df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.("studlab")
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_rest)
+    df_list <- append(df_list[[lbl]], list(prim_df))
+    df_list <- append(df_list[[lbl]], list(unq_rest))
+    ## remaining dupli_res
+    remainder <- rest_df %>% filter.(studlab %in% dupli_rest)
+
+    return(df_list)
+}
+
+
+
+
+
+
+split_df <- function(df, outcomes) {
+    df_list <- list()
+    for (outc in outcomes) {
+        ### identify studies
+        prim_df <- df %>% filter.(outcome == outc)
+        prim_studlabs <- unique(prim_df[["studlab"]])
+        rest_df <- df %>%
+            filter.(!studlab %in% prim_studlabs)
+        dupli_rest <- rest_df %>%
+            count.(studlab) %>%
+            filter.(N > 1) %>%
+            pull.("studlab")
+        unq_rest <- rest_df %>% filter.(!studlab %in% dupli_rest)
+
+        ## Merge dataframes
+        out_df <- bind_rows.(prim_df, unq_rest)
+
+        if (length(dupli_rest) > 0) {
+            remain_outc <- rest_df %>% filter.(studlab %in% dupli_rest)
+            df_lists <- split_df(remain_outc, get_dupli_outcomes(remain_outc))
+        } else {
+            out_list <- list(out_df)
+        }
+        df_list[[outc]] <- out_list
+    }
+    return(df_list)
+}
+
+
+df_list <- list()
+prim_df <- df %>% filter.(outcome == outc)
+prim_studlabs <- unique(prim_df[["studlab"]])
+rest_df <- df %>%
+    filter.(!studlab %in% prim_studlabs)
+dupli_rest <- rest_df %>%
+    count.(studlab) %>%
+    filter.(N > 1) %>%
+    pull.("studlab")
+unq_rest <- rest_df %>% filter.(!studlab %in% dupli_rest)
+df_list <- append(df_list, list(prim_df))
+df_list <- append(df_list, list(unq_rest))
+df_out <- rbindlist(df_list)
+remain_outc <- rest_df %>% filter.(studlab %in% dupli_rest)
+
+prim_df
+
+unq_rest
+
+## Split rest i unique rest og dupli_studlab rest
+
+## Hvis nrow dupli_studlab_rest > 0:
+## gentag ovenstående?
+
+
+split_dfs <- function(df) {
+    outcomes <- get_dupli_outcomes(df)
+    prim_dfs <- outcomes %>% map(~ df %>% filter.(outcome == .x))
+    rest_dfs <- prim_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+    dupli_studlabs <- rest_dfs %>% map(~ .x %>%
+        count.(studlab) %>%
+        filter(N > 1) %>%
+        pull.(studlab))
+
+    unq_rest <- rest_dfs %>% map2(dupli_studlabs, ~ .x %>% filter.(!studlab %in% .y))
+
+    base_dfs <- unq_rest %>% map2(prim_dfs, ~ bind_rows.(.x, .y))
+
+    return(base_dfs)
+}
+
+
+
+##################
+
+
+get_dupli_outcomes <- function(df) {
+    studlabs <- df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.("studlab")
+    outcomes <- df %>%
+        filter.(studlab %in% studlabs) %>%
+        pull.(outcome) %>%
+        unique() %>%
+        as.character()
+    return(outcomes)
+}
+
+
+get_unq_rest_df <- function(df, prim_df) {
+    rest_df <- df %>% filter.(!studlab %in% prim_df[["studlab"]])
+    dupli_studlabs <- rest_df %>%
+        count.(studlab) %>%
+        filter(N > 1) %>%
+        pull.(studlab)
+
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
+    return(unq_rest)
+}
+
+
+get_dfs <- function(df, outcomes) {
+
+    loop_out <- list()
+    if (length(outcomes) == 0) {
+        loop_out[[1]] <- df
+    } else {
+        for (outc in outcomes) {
+            loop_out[[outc]] <- df %>% filter.(outcome == outc)
+        }
+    }
+    return(loop_out)
+}
+
+
+get_rests <- function(df, base_dfs) {
+    out <- list()
+
+    for (idx in seq_along(base_dfs)) {
+        base_df <- base_dfs[[idx]]
+        out[[idx]] <- df %>% filter.(!studlab %in% base_df[["studlab"]])
+    }
+    return(out)
+}
+
+merge_dfs <- function(base_df, prim_dfs) {
+    out <- list()
+    for (idx in seq_along(prim_dfs)) {
+        df <- prim_dfs[[idx]]
+        out[[idx]] <- bind_rows.(df, base_df)
+    }
+    return(out)
+}
+
+get_dupli_outcomes_nested <- function(list_of_rests) {
+    list_of_rests %>% map(~get_dupli_outcomes(.x))
+}
+
+
+## for loop over outcomes
+split_outcomes <- function(df, outc) {
+    ### Filter on primary outcome ->  filter unq -> merge to base_df
+    prim_df <- df %>% filter.(outcome == outc)
+    rest_df <- df %>% filter.(!studlab %in% prim_df[["studlab"]])
+    dupli_studlabs <- rest_df %>%
+        count.(studlab) %>%
+        filter(N > 1) %>%
+        pull.(studlab)
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
+    # it is only the first time that there are unq.
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
+
+    base_df <- bind_rows.(prim_df, unq_rest)
+
+    ### Identify remaining -> split on outcome -> merge to base
+    rest_df2 <- df %>% filter.(!studlab %in% pull(base_df, studlab))
+
+    if (nrow(rest_df2) == 0) {
+        return(base_df)
+    }
+
+    prim_dfs <- get_dupli_outcomes(rest_df2) %>% map(~ rest_df2 %>% filter.(outcome == .x))
+    base_dfs <- prim_dfs %>% map(~ bind_rows.(.x, base_df))
+
+    ### identify remaining -> split on outcome -> add to base_dfs
+    rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+    dupli_outcomes <- rest_dfs %>% map(~ get_dupli_outcomes(.x))
+    prim_dfs2 <- map2(dupli_outcomes, rest_dfs, ~ get_dfs(.y, .x))
+    base_dfs2 <- map2(prim_dfs2, base_dfs, ~ merge_dfs(.y, .x))
+
+    ### identify remaining -> split on outcome -> add to base_dfs
+    rest_dfs2 <- base_dfs2 %>% map(~df %>% filter.(!studlab %in% .x[["studlab"]]))
+    dupli_outcomes2 <- rest_dfs2 %>% map(~get_dupli_outcomes(.x))
+    prim_dfs3 <- map2(dupli_outcomes2, rest_dfs2, ~ get_dfs(.y, .x))
+    base_dfs3 <- map2(prim_dfs3, base_dfs2, ~ merge_dfs(.y, .x))
+    
+
+
+
+
+    rest_dfs2 <- base_dfs2 %>% map(~ get_rests(df, .x))
+    dupli_outcomes2 <- rest_dfs2 %>% map(~get_dupli_outcomes_nested(.x))
+    prim_dfs3 <- map2(dupli_outcomes2, rest_dfs2, ~ get_dfs(.y, .x))
+
+
+    return(base_dfs2)
+}
+####################################### 3
+
+
+
+get_dfs2 <- function(df_list, outcomes) {
+    loop_out <- list()
+    for df in df_list {
+    
+    if (length(outcomes) == 0) {
+        loop_out[[1]] <- df
+    } else {
+        for (outc in outcomes) {
+            loop_out[[outc]] <- df %>% filter.(outcome == outc)
+        }
+    }}
+    return(loop_out)
+}
+
+
+
+
+
+
+
+
+
+
+base_dfs2 %>% map(~ get_rests(df, .x))
+
+
+
+splitted_dfs <- get_dupli_outcomes(df) %>% map(~ split_outcomes(df, .x))
+
+
+
+base_dfs2 %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+
+get_rests(df, base_dfs2[[4]])
+
+#############
+
+
+## REMAINING DATAFRAME
+dupli_rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+
+prim_dfs2 <- dupli_rest_dfs %>% map(~ get_prim_dfs(.x))
+unq_rest_dfs2 <- get_unq_rest_dfs(prim_dfs2)
+
+
+map2(unq_rest_dfs2, ~ bind_rows(.x, .y)) ### JEG ER NÅET HERTIL - DET ER FORDI DET ER NESTED LISTS. SKAL FINDE PÅ EN MÅDE AT KOMBINERE HVER SUBLISTE MED PRIM_DFS2
+
+# TODO: Første gang er anderledes end anden
+# Hvis jeg kan lave en function der står for anden kan jeg køre den så mange gange jeg vil ..
+## Nemmere at lave det uden map men som en func?
+# fokusere på at dine dfs med unique entries og add dem baglæns
+
+
+############ MULTI_SPLIT
+df_qol <- read_rds("output/test_split_qol.rds") %>% select.(studlab, outcome)
+df_func <- read_rds("output/test_split_func.rds") %>% select.(studlab, outcome)
+
+outc <- "ases"
+row_id <- 123
+df <- df_func
+
+subset <- df_func %>%
+    split_multi_outc(row_id) %>%
+    map(rbindlist)
+
+subset
+
+##### TEST QOL
+
+test_qol <- df_qol %>%
+    split_multi_outc(row_id) %>%
+    map(rbindlist)
+test_qol_bool <- test_qol %>%
+    map(~ any(duplicated(.x[["studlab"]]))) %>%
+    unlist()
+
+testthat::expect_false(any(test_qol_bool))
+
+##### TEST FUNC
+test_func <- df_func %>%
+    split_multi_outc(row_id) %>%
+    map(rbindlist)
+test_func_bool <- test_func %>%
+    map(~ any(duplicated(.x[["studlab"]]))) %>%
+    unlist()
+
+testthat::expect_false(any(test_func_bool))
+
+
+
+
+
+
+# %%
+df1 <- df %>% filter(outcome == "eq5d")
+df2 <- df %>% filter(!(studlab == "rangan 2015" & outcome == "eq5d"))
+
+test <- list("123_sf12pcs" = df2, "123_eq5d" = df1)
+
+testthat::expect_equal(subset, test)
+test
+
+####
+
+### COMBINING LISTS
+subsets <- c(
+    rrapply(subsets, f = identity, classes = "data.frame", how = "flatten"),
+    rrapply(subsets, f = identity, classes = "list", how = "flatten") %>%
+        flatten()
+)
+
+
+testthat::expect
+
+#####
+
+sel_grid %>% filter(row_id == 73249)
 
 subset
 

@@ -12,7 +12,7 @@ p <- add_argument(p, "--most_disc", help = "Output methodological choices for mo
 
 args <- parse_args(p)
 
-# args <- list(outcome = "qol", protocol = "none", "n_splits" = 1, "split_no" = 1)
+# args <- list(outcome = "func", protocol = "none", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
