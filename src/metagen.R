@@ -12,7 +12,7 @@ p <- add_argument(p, "--most_disc", help = "Output methodological choices for mo
 
 args <- parse_args(p)
 
-# args <- list(outcome = "qol", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
+# args <- list(outcome = "func", protocol = "none", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
@@ -58,6 +58,7 @@ source(here("src", "functions.R"))
 # PRINT INFO
 cores <- future::availableCores()
 # ram <- benchmarkme::get_ram()
+print(R.version)
 cat("Outcome is:", OUTCOME, "\n")
 cat("PROTOCOL IS:", PROTOCOL, "\n")
 cat("DEV_RUN:", DEV_RUN, "\n")
@@ -283,7 +284,7 @@ data <- data_cont %>%
   filter(outcome %in% OUTCOME_VARS) %>%
   make_binary(outcome = OUTCOME, protocol = PROTOCOL) %>%
   select(studlab, interv, outcome, follow_up, all_of(EFFECT_SIZE_COLS), starts_with("bin_")) %>%
-  as.data.table()
+  as_tidytable()
 
 # Create selection grids  ---------------------------------------------------
 
