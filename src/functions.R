@@ -307,32 +307,109 @@ remove_nulls <- function(df, grid, list_of_combos) {
 
 # split multi outcome -----------------------------------------
 
+get_dupli_outcomes <- function(df) {
+    studlabs <- df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.("studlab")
+    outcomes <- df %>%
+        filter.(studlab %in% studlabs) %>%
+        pull.(outcome) %>%
+        unique() %>%
+        as.character()
+    return(outcomes)
+}
 
-split_multi_outc <- function(df, row_id) {
-    outcomes <- unique(df[duplicated(df[["studlab"]])][["outcome"]])
 
+
+get_dfs <- function(df, outcomes) {
     loop_out <- list()
-    for (outc in outcomes) {
-        lbl <- str_c(as.character(row_id), "_", outc)
-        prim_df <- df[outcome == outc]
-
-        prim_studlabs <- unique(prim_df[["studlab"]])
-
-        rest_df <- df %>%
-            filter.(!studlab %in% prim_studlabs)
-
-        if (!any(duplicated(rest_df$studlab))) {
-            if (nrow(rest_df) > 0) {
-                loop_out[[lbl]] <- list(prim_df, rest_df)
-            } else {
-                loop_out[[lbl]] <- list(prim_df)
-            }
-        } else {
-            split_list <- split_multi_outc(rest_df, row_id)
-            loop_out[[lbl]] <- c(list(prim_df), flatten(split_list))
+    if (length(outcomes) == 0) {
+        loop_out[[1]] <- df
+    } else {
+        for (outc in outcomes) {
+            loop_out[[outc]] <- df %>% filter.(outcome == outc)
         }
     }
     return(loop_out)
+}
+
+
+merge_dfs <- function(base_df, prim_dfs) {
+    out <- list()
+    for (idx in seq_along(prim_dfs)) {
+        df <- prim_dfs[[idx]]
+        out[[idx]] <- bind_rows.(base_df, df)
+    }
+    return(out)
+}
+
+
+
+## for loop over outcomes
+split_outcomes <- function(df, outc, row_id) {
+    out <- list()
+    ### Filter on primary outcome ->  filter unq -> merge to base_df
+    prim_df <- df %>% filter.(outcome == outc)
+    rest_df <- df %>% filter.(!studlab %in% prim_df[["studlab"]])
+    dupli_studlabs <- rest_df %>%
+        count.(studlab) %>%
+        filter.(N > 1) %>%
+        pull.(studlab)
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
+    # it is only the first time that there are unq.
+    unq_rest <- rest_df %>% filter.(!studlab %in% dupli_studlabs)
+
+    base_df <- bind_rows.(prim_df, unq_rest)
+
+    ### Identify remaining -> split on outcome -> merge to base
+    rest_df2 <- df %>% filter.(!studlab %in% pull.(base_df, studlab))
+
+    if (nrow(rest_df2) == 0) {
+        out <- append(out, list(base_df))
+        out <- out %>%
+            map(~ .x %>% arrange.(studlab)) %>%
+            set_names(~ str_c(row_id, outc, seq_along(.), sep = "_"))
+        return(out)
+    }
+
+    prim_dfs <- get_dupli_outcomes(rest_df2) %>% map(~ rest_df2 %>% filter.(outcome == .x))
+    base_dfs <- prim_dfs %>% map(~ bind_rows.(base_df, .x))
+
+    ### identify remaining -> split on outcome -> add to base_dfs
+
+    rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+    done_idx <- rest_dfs %>%
+        map(~ nrow(.x) == 0) %>%
+        unlist()
+    if (sum(done_idx) == length(base_dfs)) {
+        out <- base_dfs
+    } else {
+        out <- append(out, base_dfs[done_idx])
+    }
+
+    rest_dfs <- rest_dfs[!done_idx]
+    base_dfs <- base_dfs[!done_idx]
+
+
+    while (length(base_dfs) > 0) {
+        dupli_outcomes <- rest_dfs %>% map(~ get_dupli_outcomes(.x))
+        prim_dfs <- map2(dupli_outcomes, rest_dfs, ~ get_dfs(.y, .x))
+        base_dfs <- map2(prim_dfs, base_dfs, ~ merge_dfs(.y, .x)) %>% flatten()
+
+        ### identify remaining -> split on outcome -> add to base_dfs
+        rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
+        done_idx <- rest_dfs %>%
+            map(~ nrow(.x) == 0) %>%
+            unlist()
+        out <- append(out, base_dfs[done_idx])
+        rest_dfs <- rest_dfs[!done_idx]
+        base_dfs <- base_dfs[!done_idx]
+    }
+    out <- out %>%
+        map(~ .x %>% arrange.(studlab)) %>%
+        set_names(~ str_c(row_id, outc, seq_along(.), sep = "_"))
+    return(out)
 }
 
 ### SUBSET FUNCTION --------------------
@@ -451,8 +528,10 @@ do_subset <- function(df,
         return(NULL)
     }
     if (any(duplicated(subset[["studlab"]]))) {
-        subset <- split_multi_outc(subset, row_id) %>%
-            map(rbindlist)
+        subset <- get_dupli_outcomes(subset) %>%
+            map(~ split_outcomes(subset, .x, row_id)) %>%
+            flatten()
+        subset <- subset[!duplicated(subset)]
     } else {
         return(subset)
     }

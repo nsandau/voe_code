@@ -12,7 +12,7 @@ p <- add_argument(p, "--most_disc", help = "Output methodological choices for mo
 
 args <- parse_args(p)
 
-# args <- list(outcome = "func", protocol = "none", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
+# args <- list(outcome = "qol", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
@@ -406,25 +406,19 @@ plan(sequential)
 toc()
 cat("Length of subsets:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-
 # tic("Writing subsets")
 # write_feather(data.table(subsets = subsets), here::here("output", str_c("subsets_", OUTCOME, ".feather")))
 # toc()
 
-###### split list to multi_out and dfs
-cat("Starting list splitting", "\n")
+###### flatten lists with multi_outcomes nested
+tic("Flatten lists")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
-tic("Splitting lists")
-subsets <- c(
-  rrapply(subsets, f = identity, classes = "data.frame", how = "flatten"),
-  rrapply(subsets, f = identity, classes = "list", how = "flatten") %>%
-    flatten()
-)
+subsets <- rrapply(subsets, f = identity, classes = "data.frame", how = "flatten")
 toc()
-cat("Length of subsets after split:", length(subsets), "\n")
+cat("Length of subsets after flatten:", length(subsets), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
-###### REMOVE SUBSETS WITH 1K
+###### REMOVE SUBSETS WITH k = 1
 tic("Remove k = 1 subsets")
 
 subsets <- subsets %>% discard(~ nrow(.x) == 1)
