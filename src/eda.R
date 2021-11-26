@@ -260,22 +260,47 @@ split_outcomes <- function(df, outc, row_id) {
 }
 ####################################### 3
 
-##
 ## inde i subset func:
 
 if (any(duplicated(subset[["studlab"]]))) {
     duplicated_outcomes <- get_dupli_outcomes(subset)
     subset <- duplicated_outcomes %>%
-        map(~ split_outcomes(subset, .x, row_id))
-
-    if (class(subset) == "list") {
-        subset <- subset %>% flatten()
-        subset <- subset[!duplicated(subset)]
-    }
+        map(~ split_outcomes(subset, .x, row_id)) %>%
+        flatten()
+    subset <- subset[!duplicated(subset)]
 }
 
 #############
 
+## INDE I METAGEN
+
+subsets <- read_rds("output/test_subsets.rds")
+
+subsets[str_detect(names(subsets), "52519")]
+
+subsets <- c(
+    rrapply(subsets, f = identity, classes = "data.frame", how = "flatten"),
+    rrapply(subsets, f = identity, classes = "list", how = "flatten") %>%
+        flatten()
+)
+
+rrap1 <- rrapply(subsets, f = identity, classes = "data.frame", how = "flatten")
+rrap2 <- rrapply(subsets, f = identity, classes = "list", how = "flatten")
+
+
+rrap1 %>% length()
+
+
+rrap2 %>% length()
+
+subsets %>% length()
+
+(length(rrap2) + length(subsets)) == length(rrap1)
+
+rrap1[str_detect(names(rrap1), "52519")]
+
+
+#############################
 
 ## REMAINING DATAFRAME
 dupli_rest_dfs <- base_dfs %>% map(~ df %>% filter.(!studlab %in% .x[["studlab"]]))
