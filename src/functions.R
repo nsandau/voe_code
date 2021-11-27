@@ -211,7 +211,7 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
         rob = unique(df$bin_rob)
     )
 
-    ##### TODO: TEST IF GRID_VAL POSSIBLE WHEN DROPPING DOCTREAT
+    ##### Drop doctreat when outcome = "func"
     if (outcome_type == "func") {
         grid_vals[["doctreat"]] <- 2
     } # any regardless of doctreat
