@@ -271,11 +271,6 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
             across.(where(is.character), as_factor)
         )
 
-    # ## Add row_id
-    # grid <- grid %>% mutate.(
-    #     row_id = row_number.()
-    # )
-
     return(grid)
 }
 

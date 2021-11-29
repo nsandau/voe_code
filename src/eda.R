@@ -2,6 +2,18 @@ library(tidyverse)
 library(tidytable)
 library(data.table)
 library(arrow)
+
+subsets <- read_rds("output/test_rowid_qol_subsets.rds")
+
+
+subsets[["230641"]]
+subsets <- subsets %>%
+    set_names(sel_grid$row_id) %>%
+    discard(~ is.null(.x))
+
+names(subsets) %>%
+    enframe() %>%
+    filter(str_detect(value, "230641"))
 ##### NÅET HERTIL ! ###
 split_multi_outc <- function(df, row_id) {
     studlabs <- df %>%

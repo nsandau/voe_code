@@ -12,7 +12,7 @@ p <- add_argument(p, "--most_disc", help = "Output methodological choices for mo
 
 args <- parse_args(p)
 
-# args <- list(outcome = "func", protocol = "none", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
+# args <- list(outcome = "qol", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
@@ -298,7 +298,10 @@ cat("Creating selection grid ", "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 tictoc::tic("Selection grid")
 sel_grid <- data %>%
-  make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL)
+  make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL) %>%
+  mutate.(
+    row_id = row_number.()
+  )
 tictoc::toc()
 cat("Length of sel_grid before split: ", nrow(sel_grid), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
@@ -317,34 +320,7 @@ cat("Length of sel_grid after split: ", nrow(sel_grid), "\n")
 cat("Mem usage:", mem_used() / 1024 / 1024, "mb", "\n")
 
 
-
-# remove nulls
-combs <- list(
-  c("follow_up", "outcome"),
-  c("intervention", "outcome"),
-  c("intervention", "follow_up")
-)
-
-nrow_before <- nrow(sel_grid)
-cat("Rows before removal of nulls:", nrow_before, "\n")
-
-tic("Remove nulls")
-sel_grid <- remove_nulls(df = data, grid = sel_grid, list_of_combos = combs)
-toc()
-
-nrow_after <- nrow(sel_grid)
-cat("Rows after removal of nulls:", nrow_after, "\n")
-nrow_diff <- nrow_before - nrow_after
-cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
-
-
-### ADD ROW_ID
-sel_grid <- sel_grid %>% mutate.(
-  row_id = row_number.()
-)
-
-### Only do analyses for MOST DISCORDANT IF FLAG IS GIVEN
-
+### Subset sel_grid for most disc
 if (MOST_DISC) {
   results_merged <- read_feather("output/results_merged.feather")
   most_disc <- list()
@@ -371,7 +347,32 @@ if (MOST_DISC) {
     filter(row_id %in% idx)
 
   most_disc[["sel_grid"]] <- sel_grid
+
+  if (nrow(sel_grid) == 0) {
+    cat("No rows in this split")
+    quit(save = "no")
+  }
 }
+
+
+# remove nulls
+combs <- list(
+  c("follow_up", "outcome"),
+  c("intervention", "outcome"),
+  c("intervention", "follow_up")
+)
+
+nrow_before <- nrow(sel_grid)
+cat("Rows before removal of nulls:", nrow_before, "\n")
+
+tic("Remove nulls")
+sel_grid <- remove_nulls(df = data, grid = sel_grid, list_of_combos = combs)
+toc()
+
+nrow_after <- nrow(sel_grid)
+cat("Rows after removal of nulls:", nrow_after, "\n")
+nrow_diff <- nrow_before - nrow_after
+cat("Rows removed:", nrow_diff, (nrow_after / nrow_before) * 100, "%", "\n")
 
 
 # tic("Writing sel_grid")
@@ -401,7 +402,7 @@ subsets <- sel_grid %>%
     .f = do_subset,
     df = data
   ) %>%
-  set_names(seq_along(.)) %>%
+  set_names(sel_grid$row_id) %>%
   discard(~ is.null(.x))
 plan(sequential)
 toc()
@@ -458,7 +459,6 @@ results_df <- results %>%
 
 cat("Results_df rows", nrow(results_df), "\n")
 
-
 ### RECODE PROTOCOL SKOU ONLY USES RANDOM EFFECTS
 
 if (PROTOCOL == "skou") {
@@ -467,7 +467,7 @@ if (PROTOCOL == "skou") {
 
 if (MOST_DISC) {
   most_disc[["results_df"]] <- results_df
-  most_disc %>% readr::write_rds(str_c("output/", "most_disc_", OUTCOME, "_", PROTOCOL, ".rds"))
+  most_disc %>% readr::write_rds(str_c("output/", "most_disc_", OUTCOME, "_", PROTOCOL, "_", SPLIT_NO, ".rds"))
 } else {
   tic("Writing results ")
   write_feather(results_df, here("output", str_c("results_", OUTCOME, "_", SPLIT_NO, "_", PROTOCOL, ".feather")))
