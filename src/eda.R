@@ -2,6 +2,52 @@ library(tidyverse)
 library(tidytable)
 library(data.table)
 library(arrow)
+library(flextable)
+
+data_extract %>%
+    filter(studlab == "stableforth 1984") %>%
+    select(infection_18_e)
+
+data_all <- read_rds("output/data_all.rds")
+
+
+data_all %>%
+    select(studlab, language, total_n, total_avg_age, interv, follow_up, outcome, adverse_events) %>%
+    group_by(studlab) %>%
+    mutate(
+        follow_up = paste0(unique(follow_up)[!is.na(unique(follow_up))], collapse = ", "),
+        outcome = paste0(unique(outcome)[!is.na(unique(outcome))], collapse = ", "),
+        adverse_events = paste0(unique(adverse_events)[!is.na(unique(adverse_events))], collapse = ", "),
+    ) %>%
+    distinct() %>%
+    flextable()
+
+
+
+
+
+
+
+out[["fjalestad 2014"]][!is.na(out[["fjalestad 2014"]])]
+
+data_all %>%
+    group_by(studlab) %>%
+    dplyr::summarise(
+        intervention = unique(interv)
+    )
+
+
+readr::write_rds(data_qol, "output/data_qol.rds")
+readr::write_rds(data_func, "output/data_func.rds")
+readr::write_rds(data_bin, "output/data_bin.rds")
+readr::write_rds(data_all, "output/data_all.rds")
+
+
+data_qol
+data_func
+data_bin
+
+
 
 subsets <- read_rds("output/test_rowid_qol_subsets.rds")
 
