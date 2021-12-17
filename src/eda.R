@@ -24,7 +24,22 @@ data_all %>%
 
 
 
+###
+data %>%
+    glimpse() %>%
+    select(studlab, publ_date, bin_year) %>%
+    distinct() %>%
+    mutate(
+        bin_year_2 = case_when(
+            year(publ_date) >= 1995 ~ 1,
+            year(publ_date) >= 1990 ~ 2,
+            TRUE ~ 3
+        )
+    ) %>%
+    view()
 
+
+###
 
 
 
