@@ -12,7 +12,7 @@ p <- add_argument(p, "--most_disc", help = "Output methodological choices for mo
 
 args <- parse_args(p)
 
-# args <- list(outcome = "bin", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
+# args <- list(outcome = "qol", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
@@ -77,7 +77,7 @@ conflict_prefer("filter", "dplyr", quiet = T)
 # if running on local import directly from xlsx else import from saved RDS
 
 if (cores < 20) {
-  read_excel("/home/nicolai/OneDrive/Forskning/Phd/3 Simulation/02 - Data extract/outcome extract/p3 data extract.xlsx") %>%
+  read_excel("/home/nicolai/OneDrive/Forskning/Phd/3 voe/02 - Data extract/outcome extract/p3 data extract.xlsx") %>%
     clean_names() %>%
     mutate(
       across(where(is.character), str_to_lower),
@@ -300,7 +300,7 @@ tictoc::tic("Selection grid")
 sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL) %>%
   mutate.(
-    row_id = row_number.()
+    row_id = as.numeric(row_number.())
   )
 tictoc::toc()
 cat("Length of sel_grid before split: ", nrow(sel_grid), "\n")
