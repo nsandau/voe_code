@@ -300,7 +300,7 @@ tictoc::tic("Selection grid")
 sel_grid <- data %>%
   make_sel_grid(outcome_type = OUTCOME, protocol = PROTOCOL) %>%
   mutate.(
-    row_id = as.numeric(row_number.())
+    row_id = row_number.()
   )
 tictoc::toc()
 cat("Length of sel_grid before split: ", nrow(sel_grid), "\n")

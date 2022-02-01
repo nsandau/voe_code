@@ -267,7 +267,7 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
     ### CREATE GRID
     grid <- expand_grid.(!!!grid_vals) %>%
         mutate.(
-            across.(where(is.integer), as.numeric),
+            across.(where(is.numeric), as.integer),
             across.(where(is.character), as_factor)
         )
 
