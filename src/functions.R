@@ -565,8 +565,7 @@ do_meta <- function(data, outcome) {
             MH.exact = FALSE,
             comb.fixed = TRUE,
             comb.random = TRUE,
-            method.tau = "PM",
-            hakn = TRUE
+            hakn = FALSE
         )
     }
 }
