@@ -7,7 +7,7 @@
 bash run_splits.sh bin none 15 # passende 
 
 ## HANDOL AND RCT split
-for protocol in handoll rct; do
+for protocol in handoll; do
 bash run_splits.sh bin $protocol 3 
 done
 
@@ -21,7 +21,7 @@ done
 bash run_splits.sh func none 8 # passende
 
 ## HANDOLL AND RCT
-for protocol in handoll rct; do
+for protocol in handoll; do
 bash run_splits.sh func $protocol 2 
 done
 
@@ -32,8 +32,10 @@ done
 
 # QOL 
 ## ALL # beks doesnt include qol
-for protocol in none handoll skou rct; do
+for protocol in none handoll skou; do
 bash run_splits.sh qol $protocol 1
 done
+
+
 
 
