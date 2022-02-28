@@ -1,18 +1,15 @@
 library(argparser)
 
 p <- arg_parser("metagen")
-
 p <- add_argument(p, "outcome", help = "define outcome", type = "character")
 p <- add_argument(p, "protocol", help = "define protocol", type = "character")
 p <- add_argument(p, "n_splits", help = "No. of splits", type = "integer")
 p <- add_argument(p, "split_no", help = "Split no for this run", type = "integer")
 p <- add_argument(p, "--dev_run", help = "conduct dev_run", flag = T)
-
 p <- add_argument(p, "--most_disc", help = "Output methodological choices for most discordant results", flag = T)
-
 args <- parse_args(p)
 
-# args <- list(outcome = "qol", protocol = "handoll", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
+# args <- list(outcome = "bin", protocol = "none", "n_splits" = 1, "split_no" = 1, dev_run = FALSE, most_disc = FALSE)
 
 OUTCOME <- args$outcome
 testthat::expect_true(OUTCOME %in% c("qol", "func", "bin"))
@@ -226,6 +223,7 @@ data_cont <- data_extract %>%
     outcome = as_factor(outcome),
     interv = as_factor(interv)
   )
+
 
 ### TESTS ###
 testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)

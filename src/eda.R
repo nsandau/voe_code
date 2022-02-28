@@ -4,6 +4,29 @@ library(data.table)
 library(arrow)
 library(flextable)
 
+#####################
+
+# CALCULATE COMPLICATIONS
+
+##### WORKING
+
+
+data_cont %>%
+    group_by(studlab, follow_up) %>%
+    select(studlab, follow_up, outcome, starts_with(c("con_", "int_"))) %>%
+    filter(!outcome %in% c("complications", "revision")) %>%
+    summarize(int_e = sum(int_e), int_n = int_n, con_e = sum(con_e), con_n = con_n) %>%
+    distinct() %>%
+    filter(con_n == max(con_n) & int_n == max(int_n)) %>%
+    view()
+
+
+
+
+
+
+
+##################
 data_extract %>%
     filter(studlab == "stableforth 1984") %>%
     select(infection_18_e)
