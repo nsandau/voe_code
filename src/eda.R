@@ -4,26 +4,50 @@ library(data.table)
 library(arrow)
 library(flextable)
 
+
+
+df <- data_cont
+
+df %>% view()
 #####################
+
+data_extract %>%
+    select(-neer_converted) %>%
+    mutate(imputed_outcome = str_replace_all(imputed_outcome, "wrong", "not_std"), imputed_vars = str_replace_all(imputed_vars, "cs, avn", "cs")) %>%
+    readr::write_csv("output/data.csv", na = "")
+
+
+readr::read_csv("output/data.csv") %>%
+    select(-starts_with("complications")) %>%
+    glimpse()
+
+##########
 
 # CALCULATE COMPLICATIONS
 
+data_extract
 ##### WORKING
 
-
-data_cont %>%
+complications <- data_cont %>%
     group_by(studlab, follow_up) %>%
     select(studlab, follow_up, outcome, starts_with(c("con_", "int_"))) %>%
     filter(!outcome %in% c("complications", "revision")) %>%
     summarize(int_e = sum(int_e), int_n = int_n, con_e = sum(con_e), con_n = con_n) %>%
     distinct() %>%
     filter(con_n == max(con_n) & int_n == max(int_n)) %>%
-    view()
+    mutate(outcome = "complications") %>%
+    ungroup() %>%
+    left_join(data_cont %>% select(-c(int_e, int_n, con_e, con_n, outcome)), by = c("studlab", "follow_up")) %>%
+    distinct()
+
+bind_rows(data_cont, complications)
+
+data_cont
 
 
 
 
-
+data_cont %>% view()
 
 
 ##################
