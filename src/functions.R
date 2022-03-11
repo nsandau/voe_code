@@ -100,7 +100,7 @@ make_binary <- function(df, outcome, protocol) {
         ) %>%
         ungroup() %>%
         mutate(
-            bin_outcome = outcome,
+            bin_outcome = as_factor(outcome),
             across(starts_with("bin_"), as.integer)
         )
 
@@ -232,7 +232,7 @@ make_sel_grid <- function(df, outcome_type = NULL, protocol = NULL) {
 
 
         if (outcome_type == "bin") {
-            grid_vals[["outcome"]] <- c(1, 3, 6, 7)
+            grid_vals[["outcome"]] <- c(1, 2, 5, 6)
         } # revisions, displacement, avn, nonunion}
     }
 

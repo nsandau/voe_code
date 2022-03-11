@@ -124,10 +124,10 @@ bin_outcomes <- c(
   "nonunion"
 )
 
-# FOR NOW REMOVE BIN OUTCOMES RCT, INSTABILITY, MALUNION, STIFFNESS, IMPINGEMENT
+# REMOVE BIN OUTCOMES RCT, INSTABILITY, MALUNION, STIFFNESS, IMPINGEMENT AND COMPLICATIONS AS WE COUNT THAT AUTOMATICALLY
 data_extract <- data_extract %>%
   select(-starts_with(
-    c("rct", "instability", "malunion", "stiffness", "impingement")
+    c("rct", "instability", "malunion", "stiffness", "impingement", "complications")
   ))
 
 
@@ -229,6 +229,24 @@ data_cont <- data_extract %>%
 testthat::expect_setequal(data_cont %>% filter(is.na(con_n)) %>% nrow(), 0)
 testthat::expect_setequal(data_cont %>% filter(is.na(int_n)) %>% nrow(), 0)
 ####
+
+### CALCULATE TOTAL NUMBER OF MAJOR ADVERSE EVENTS ###
+if (OUTCOME == "bin") {
+  complications <- data_cont %>%
+    group_by(studlab, follow_up) %>%
+    select(studlab, follow_up, outcome, starts_with(c("con_", "int_"))) %>%
+    filter(!outcome %in% c("complications", "revision")) %>%
+    summarize(int_e = sum(int_e), int_n = int_n, con_e = sum(con_e), con_n = con_n) %>%
+    distinct() %>%
+    filter(con_n == max(con_n) & int_n == max(int_n)) %>%
+    mutate(outcome = "complications") %>%
+    ungroup() %>%
+    left_join(data_cont %>% select(-c(int_e, int_n, con_e, con_n, outcome)), by = c("studlab", "follow_up")) %>%
+    distinct()
+
+  data_cont <- bind_rows(data_cont, complications)
+}
+
 
 # REVERSE DASH NUMERIC OUTCOMES--------------------------------------
 
