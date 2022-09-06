@@ -19,7 +19,7 @@ data_extract %>%
 
 readr::read_csv("output/data.csv") %>%
     select(-starts_with("complications")) %>%
-    glimpse()
+    readr::write_csv("output/voe_data.csv")
 
 ##########
 
